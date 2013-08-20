@@ -28,12 +28,7 @@ import Print
 import Rfc1342
 import State
 
-ppBaseRow = 0
-ppBaseColumn = 0
-
---
 -- | Main entry point
---                    
 entryPoint :: MState -> IO ()
 entryPoint st' = do
   maildirs <- getMaildirsRecursively (initPath st')
@@ -49,6 +44,7 @@ entryPoint st' = do
           , detectedMDs = maildirs }
     screenLoop st
     
+-- | This functions will loop til the user decides to leave
 screenLoop :: MState -> Curses ()    
 screenLoop st = do
   w <- defaultWindow
@@ -61,9 +57,7 @@ screenLoop st = do
     then screenLoop st'
     else return ()
          
---
 -- | Handle an event
---  
 handleEvent :: MState -> Curses MState
 handleEvent st = loop where
   loop = do
@@ -81,14 +75,13 @@ handleEvent st = loop where
                     
                     _ ->  loop
          
---
 -- | Pattern match on the received mode and draw it in the screen.
---                    
 drawMode :: Mode -> MState -> Update ()
 drawMode MaildirMode st = drawMaildirHelper st (detectedMDs st)
 drawMode EmailMode   st = drawEmailHelper st
 drawMode IndexMode   st = drawIndexHelper 0 0 (curRow st) (colPadding st) (selectedEmails st)
 
+-- | Helper function of drawMode
 drawMaildirHelper _ [] = return ()
 drawMaildirHelper st (md:mds) = do
   moveCursor (curRow st) (colPadding st)
@@ -102,6 +95,7 @@ drawMaildirHelper st (md:mds) = do
     then drawMaildirHelper (incCurRow st) mds
     else return ()    
 
+-- | Helper function of drawMode
 drawIndexHelper origRow origColumn rows columns [] = moveCursor 0 0  
 drawIndexHelper origRow origColumn rows columns ((fp, _, msg):ts) = do
   moveCursor origRow origColumn
@@ -114,18 +108,7 @@ drawIndexHelper origRow origColumn rows columns ((fp, _, msg):ts) = do
     then drawIndexHelper (origRow + 1) origColumn rows columns ts
     else return ()
   
-waitFor :: Window -> (Event -> Bool) -> Curses ()
-waitFor w p = loop where
-  loop = do
-    ev <- getEvent w Nothing
-    case ev of
-      Nothing -> loop
-      Just ev' -> if p ev' then return () else loop
-
-extractParsedData :: Either a b -> b
-extractParsedData (Right msg) = msg
---extractParsedData (Left err)  = error err
-                       
+-- | Helper function of drawMode
 drawEmailHelper st = do
   let fs = getFields $ selectedEmail st
   let cropWith xs = normalizeLen $ (fromIntegral . scrColumns $ st) - (length xs)
@@ -144,9 +127,8 @@ drawEmailHelper st = do
           moveCursor row col
           drawString xs
           if row < (scrRows st) then drawBody (row + 1) col xss else return ()
---
+
 -- | Empty the whole window. Useful when changing modes.
---  
 clearMain rows columns = do
   drawEmptyLine 0
   where
@@ -157,61 +139,13 @@ clearMain rows columns = do
          then drawEmptyLine $ currentRow + 1
          else return ()
   
---  
+
 -- | Convert a String to multiple Strings, cropped by the maximum column
--- | size if necessary.
---      
+--   size if necessary.
 formatBody :: String -> Int -> [String]
 formatBody body maxColumns = format [] [] body where
   format parsed acc []                     = parsed ++ [acc]
   format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
   format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
                                 | otherwise               = format (parsed ++ [acc]) "+" rest
-  
-
-
--- drawIndex :: Maildir -> IO ()
--- drawIndex md = do
---   emails <- getAll md
---   runCurses $ do
---     setEcho False
---     (rows, columns) <- screenSize
---     w <- defaultWindow
---     updateWindow w $ do
---       clearMain (fromIntegral rows) (fromIntegral columns)
---       drawIndexHelper 0 0 (fromIntegral rows) (fromIntegral columns) emails
---     render
---     waitFor w (\ev -> ev == EventCharacter 'q' || ev == EventCharacter 'Q')
---   let (_, _, msg) = head emails 
---   drawEmail $ parseEmail msg
-  
--- drawEmail :: Message -> IO ()
--- drawEmail email = do
---   runCurses $ do
---     setEcho False
---     (rows, columns) <- screenSize    
---     w <- defaultWindow
---     updateWindow w $ do
---       clearMain (fromIntegral rows) (fromIntegral columns)      
---       drawEmailHelper ppBaseRow ppBaseColumn (fromIntegral rows - 1) (fromIntegral columns - 1) email
---     render
---     waitFor w (\ev -> ev == EventCharacter 'q' || ev == EventCharacter 'Q')
-    
--- drawMaildir :: MState -> IO ()   
--- drawMaildir st = do
---   maildirs <- getMaildirsRecursively (initPath st)
---   runCurses $ do
---     setEcho False
---     (rows, columns) <- screenSize    
---     selColID <- newColorID ColorBlack ColorWhite 1    
---     let st' = st {
---             scrRows = rows  - 1
---           , scrColumns = columns - 1
---           , selectedColorID = selColID }    
---     w <- defaultWindow
---     updateWindow w $ do
---       clearMain (fromIntegral rows) (fromIntegral columns)
---       drawMaildirHelper st' maildirs      
---     render
---     waitFor w (\ev -> ev == EventCharacter 'q' || ev == EventCharacter 'Q')
   
