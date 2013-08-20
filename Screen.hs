@@ -58,6 +58,7 @@ screenLoop st = do
     else return ()
          
 -- | Handle an event
+--   TODO: Handle the events in a cleaner way.  
 handleEvent :: MState -> Curses MState
 handleEvent st = loop where
   loop = do
@@ -109,6 +110,7 @@ drawIndexHelper origRow origColumn rows columns ((fp, _, msg):ts) = do
     else return ()
   
 -- | Helper function of drawMode
+--   TODO: Make helpers functions to draw header and body in a separate way.  
 drawEmailHelper st = do
   let fs = getFields $ selectedEmail st
   let cropWith xs = normalizeLen $ (fromIntegral . scrColumns $ st) - (length xs)
@@ -139,7 +141,6 @@ clearMain rows columns = do
          then drawEmptyLine $ currentRow + 1
          else return ()
   
-
 -- | Convert a String to multiple Strings, cropped by the maximum column
 --   size if necessary.
 formatBody :: String -> Int -> [String]
