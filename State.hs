@@ -27,7 +27,8 @@ import Network.Email.Mailbox(Flag(..), Flags)
 data Mode = MaildirMode | IndexMode | EmailMode
 
 data MState = MState {
-    selectedRow     :: Integer
+    selectedRowMD   :: Integer -- Selected row in MaildirMode
+  , selectedRowIn   :: Integer -- Selected row in IndexMode
   , mode            :: Mode
   , initPath        :: String
   , scrRows         :: Integer
@@ -35,15 +36,18 @@ data MState = MState {
   , curRow          :: Integer
   , colPadding      :: Integer
   , selectedColorID :: ColorID
+  , statusColorID   :: ColorID
   , selectedEmail   :: Message
   , selectedEmails  :: [(String, [Flag], String)]
   , selectedMD      :: String
   , detectedMDs     :: [String]
-  , exitRequested   :: Bool    
+  , exitRequested   :: Bool
+  , showStatus      :: Bool
 }
 
 initState = MState {
-    selectedRow     = 0
+    selectedRowMD   = 0
+  , selectedRowIn   = 0
   , mode            = MaildirMode
   , initPath        = ""
   , scrRows         = (-1)
@@ -51,22 +55,37 @@ initState = MState {
   , curRow          = 0
   , colPadding      = 0             
   , selectedColorID = defaultColorID
+  , statusColorID   = defaultColorID                      
   , selectedEmail   = Message [] "Dummy email"
   , selectedEmails  = []
   , selectedMD      = ""                    
   , detectedMDs     = []
-  , exitRequested   = False                      
+  , exitRequested   = False
+  , showStatus      = True
 } 
 
 incCurRow st = st { curRow = (curRow st) + 1 }
 
-incSelectedRow st | selectedRow st < fromIntegral limit = st { selectedRow = (selectedRow st) + 1 }
-                  | otherwise                           = st
+incSelectedRow st | (selectedRow st) < limit = case (mode st) of
+                                                 MaildirMode -> st { selectedRowMD = (selectedRowMD st) + 1 }
+                                                 IndexMode   -> st { selectedRowIn = (selectedRowIn st) + 1 }
+                  | otherwise = st
   where
-    limit = case (mode st) of
+    limit' = case (mode st) of
       MaildirMode -> (length $ detectedMDs st ) - 1
       IndexMode   -> (length $ selectedEmails st) - 1
-      _           -> fromIntegral $ scrRows st
+    limit = if (showStatus st) && (limit' == scrRowsAsInt st)
+            then fromIntegral $ limit' - 2
+            else fromIntegral limit'
 
-decSelectedRow st | selectedRow st > 0 = st { selectedRow = (selectedRow st) - 1 }
-                  | otherwise          = st
+decSelectedRow st | (selectedRow st) > 0 = case (mode st) of
+                                             MaildirMode -> st { selectedRowMD = (selectedRowMD st) - 1 }
+                                             IndexMode   -> st { selectedRowIn = (selectedRowIn st) - 1 }
+                  | otherwise = st
+                                         
+selectedRow st = case (mode st) of
+      MaildirMode -> selectedRowMD st
+      IndexMode   -> selectedRowIn st
+
+scrColsAsInt st = fromIntegral $ scrColumns st
+scrRowsAsInt st = fromIntegral $ scrRows st
