@@ -1,32 +1,78 @@
--- This module is part of Lazymail, a Haskell email client.
---
--- Copyright (C) 2013 Raúl Benencia <rul@kalgan.cc>
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{- Lazymail state, and operations on it.
+ -
+ - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
+ -
+ - Licensed under the GNU GPL version 3 or higher
+ - 
+ -}
 
---
--- | The top level application state, and operations on that value.
---
 module State where
 
 import Text.ParserCombinators.Parsec.Rfc2822(Message, GenericMessage(..))
 import UI.NCurses(ColorID(..), defaultColorID)
 import Network.Email.Mailbox(Flag(..), Flags)
 
-data Mode = MaildirMode | IndexMode | EmailMode
+data Mode = MaildirMode | IndexMode | EmailMode | ComposeMode
 
-data MState = MState {
+data LazymailState = LazymailState {
+    mode            :: Mode
+  , screenRows      :: Int
+  , screenColumns   :: Int
+  , currentRow      :: Int
+  , columnPadding   :: Int  
+  , exitRequested   :: Bool
+  , statusBar       :: Bool    
+  , maildirState    :: MaildirState  
+  , indexState      :: IndexState  
+  , composeState    :: ComposeState    
+}
+
+data MaildirState = MaildirState {
+    selectedRowMD   :: Int
+  , selectedMD      :: String
+  , detectedMDs     :: [String]
+}
+
+data IndexState = IndexState {
+    selectedRowIn   :: Int
+  , selectedEmail   :: Message  
+  , selectedEmails  :: [(String, [Flag], String)]
+}
+
+data ComposeState = ComposeState {
+    composition     :: Maybe String
+}
+
+initialState = LazymailState {
+    mode          = MaildirMode
+  , screenRows    = 0                   
+  , screenColumns = 0
+  , currentRow    = 0                    
+  , columnPadding = 0
+  , exitRequested = False
+  , statusBar     = True                  
+  , maildirState  = initialMaildirState
+  , indexState    = initialIndexState                    
+  , composeState  = initialComposeState                    
+}                    
+
+initialMaildirState = MaildirState {
+    selectedRowMD = 0
+  , selectedMD    = ""
+  , detectedMDs   = []                  
+}
+                    
+initialIndexState = IndexState {
+    selectedRowIn  = 0
+  , selectedEmail  = Message [] "Dummy email"
+  , selectedEmails = []
+}                     
+
+initialComposeState = ComposeState {
+    composition = Nothing
+}  
+    
+{- data MState = MState {
     selectedRowMD   :: Integer -- Selected row in MaildirMode
   , selectedRowIn   :: Integer -- Selected row in IndexMode
   , mode            :: Mode
@@ -43,7 +89,7 @@ data MState = MState {
   , detectedMDs     :: [String]
   , exitRequested   :: Bool
   , showStatus      :: Bool
-}
+} 
 
 initState = MState {
     selectedRowMD   = 0
@@ -89,3 +135,4 @@ selectedRow st = case (mode st) of
 
 scrColsAsInt st = fromIntegral $ scrColumns st
 scrRowsAsInt st = fromIntegral $ scrRows st
+-}

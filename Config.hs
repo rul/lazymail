@@ -1,16 +1,35 @@
--- This module is part of Lazymail, a Haskell email client.
+{- Lazymail user configuration
+ -
+ - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
+ -
+ - Licensed under the GNU GPL version 3 or higher
+ - 
+ -}
+
+module Config(LazymailConfig(..), defaultConfig, customConfig) where
+
+import UI.NCurses(Color(..))
+import System.FilePath(FilePath)
+
+data LazymailConfig = LazymailConfig {
+    baseColor       :: (Color, Color) -- (foreground, background)
+  , selectionColor  :: (Color, Color) 
+  , statusBarColor  :: (Color, Color)  
+  , showStatusBar   :: Bool
+  , basePath        :: Maybe FilePath   
+}    
+
+defaultConfig = LazymailConfig {
+    baseColor      = (ColorWhite, ColorBlack)
+  , selectionColor = (ColorBlack, ColorWhite)
+  , statusBarColor = (ColorBlack, ColorWhite)
+  , showStatusBar  = True                   
+  , basePath       = Nothing                   
+}
+
 --
--- Copyright (C) 2013 Raúl Benencia <rul@kalgan.cc>
+-- | Users should modify customConfig in order to set-up their
+-- preferences. In a possible future maybe I'll work in a not-so-crappy
+-- config system.
 --
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+customConfig = defaultConfig { basePath = "/home/rul/mail/kalgan" }
