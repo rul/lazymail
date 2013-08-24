@@ -1,35 +1,50 @@
--- This module is part of Lazymail, a Haskell email client.
---
--- Copyright (C) 2013 Raúl Benencia <rul@kalgan.cc>
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{- Lazymail interaction with curses.
+ -
+ - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
+ -
+ - Licensed under the GNU GPL version 3 or higher
+ - 
+ -}
 
 module Screen where
 
 import Control.Monad.Trans(liftIO)
+import Control.Monad.Reader
+import Control.Monad.State
 import Data.List(isPrefixOf)
-import UI.NCurses
+import UI.NCurses as UI
 import Text.ParserCombinators.Parsec.Rfc2822(Message(..))
 
 -- Local imports
+import Config
+import Lazymail
 import Maildir
 import Email
 import Print
 import Rfc1342
 import State
 
--- | Main entry point
+type LazymailCurses = ReaderT LazymailConfig (StateT LazymailState Curses)
+liftCurses = lift . lift 
+
+entryPoint :: Lazymail ()
+entryPoint = do
+  st <- get
+  cfg <- ask
+  maildirs <- liftIO $ getMaildirsRecursively $ basePath st
+  liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) st
+  return ()
+  
+startCurses :: LazymailCurses ()
+startCurses = do
+  st <- get
+  (rows, columns) <- liftCurses $ do
+    UI.setEcho False
+    UI.screenSize  
+    
+  return ()                    
+  
+{-- | Main entry point
 entryPoint :: MState -> IO ()
 entryPoint st' = do
   maildirs <- getMaildirsRecursively (initPath st')
@@ -203,3 +218,5 @@ handleEvent st = loop where
                           return $ st { mode = IndexMode, selectedEmails = selEmails }
                     
                     _ ->  loop
+
+-}

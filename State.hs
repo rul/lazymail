@@ -3,7 +3,7 @@
  - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
  -
  - Licensed under the GNU GPL version 3 or higher
- - 
+ -
  -}
 
 module State where
@@ -11,20 +11,23 @@ module State where
 import Text.ParserCombinators.Parsec.Rfc2822(Message, GenericMessage(..))
 import UI.NCurses(ColorID(..), defaultColorID)
 import Network.Email.Mailbox(Flag(..), Flags)
+import System.FilePath
 
 data Mode = MaildirMode | IndexMode | EmailMode | ComposeMode
 
 data LazymailState = LazymailState {
     mode            :: Mode
+  , basePath        :: FilePath
   , screenRows      :: Int
   , screenColumns   :: Int
   , currentRow      :: Int
-  , columnPadding   :: Int  
+  , columnPadding   :: Int
   , exitRequested   :: Bool
-  , statusBar       :: Bool    
-  , maildirState    :: MaildirState  
-  , indexState      :: IndexState  
-  , composeState    :: ComposeState    
+  , statusBar       :: Bool
+  , maildirState    :: MaildirState
+  , indexState      :: IndexState
+  , composeState    :: ComposeState
+  , colorStyle      :: ColorStyle
 }
 
 data MaildirState = MaildirState {
@@ -35,7 +38,7 @@ data MaildirState = MaildirState {
 
 data IndexState = IndexState {
     selectedRowIn   :: Int
-  , selectedEmail   :: Message  
+  , selectedEmail   :: Message
   , selectedEmails  :: [(String, [Flag], String)]
 }
 
@@ -43,35 +46,50 @@ data ComposeState = ComposeState {
     composition     :: Maybe String
 }
 
+data ColorStyle = ColorStyle {
+    baseColorID      :: ColorID
+  , selectionColorID :: ColorID
+  , statusBarColorID :: ColorID
+}
+
 initialState = LazymailState {
     mode          = MaildirMode
-  , screenRows    = 0                   
+  , basePath      = ""
+  , screenRows    = 0
   , screenColumns = 0
-  , currentRow    = 0                    
+  , currentRow    = 0
   , columnPadding = 0
   , exitRequested = False
-  , statusBar     = True                  
+  , statusBar     = True
   , maildirState  = initialMaildirState
-  , indexState    = initialIndexState                    
-  , composeState  = initialComposeState                    
-}                    
+  , indexState    = initialIndexState
+  , composeState  = initialComposeState
+  , colorStyle    = initialColorStyle
+}
 
 initialMaildirState = MaildirState {
     selectedRowMD = 0
   , selectedMD    = ""
-  , detectedMDs   = []                  
+  , detectedMDs   = []
 }
-                    
+
 initialIndexState = IndexState {
     selectedRowIn  = 0
   , selectedEmail  = Message [] "Dummy email"
   , selectedEmails = []
-}                     
+}
 
 initialComposeState = ComposeState {
     composition = Nothing
-}  
-    
+}
+
+initialColorStyle = ColorStyle {
+    baseColorID      = defaultColorID
+  , selectionColorID = defaultColorID
+  , statusBarColorID = defaultColorID
+}
+
+
 {- data MState = MState {
     selectedRowMD   :: Integer -- Selected row in MaildirMode
   , selectedRowIn   :: Integer -- Selected row in IndexMode
