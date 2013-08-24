@@ -32,4 +32,4 @@ defaultConfig = LazymailConfig {
 -- preferences. In a possible future maybe I'll work in a not-so-crappy
 -- config system.
 --
-customConfig = defaultConfig { basePath = "/home/rul/mail/kalgan" }
+customConfig = defaultConfig { basePath = Just "/home/rul/mail/kalgan" }
