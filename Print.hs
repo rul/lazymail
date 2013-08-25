@@ -1,19 +1,10 @@
--- This module is part of Lazymail, a Haskell email client.
---
--- Copyright (C) 2013 Raúl Benencia <rul@kalgan.cc>
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{- Printing utilities.
+ -
+ - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
+ -
+ - Licensed under the GNU GPL version 3 or higher
+ -
+ -}
 
 module Print where
 
@@ -29,13 +20,13 @@ ppNameAddr nas = concat $ map ppNameAddr' nas
   where ppNameAddr' na = case nameAddr_name na of
                            Nothing -> nameAddr_addr na
                            Just n  -> decodeField n
-                           
-ppIndexNameAddr = normalizeLen nameLen . ppNameAddr                           
-                           
+
+ppIndexNameAddr = normalizeLen nameLen . ppNameAddr
+
 subjectLen = 90
 ppSubject = decodeField
 ppIndexSubject = normalizeLen subjectLen . ppSubject
-                           
+
 ppFlags :: Flags -> String
 ppFlags = map ppFlag
 
@@ -55,7 +46,7 @@ normalizeLen len cs = if (length cs > len)
                       else if (length cs < len)
                            then fillWithSpace len cs
                            else cs
-                                
+
 fillWithSpace len cs = cs ++ (take (len - length cs) . repeat $ ' ')
 
 -- The following functions are from DynamicLog xmonad-contrib source
@@ -76,7 +67,7 @@ pad = wrap " " " "
 trim :: String -> String
 trim = f . f
     where f = reverse . dropWhile isSpace
-          
+
 -- | Limit a string to a certain length, adding "..." if truncated.
 shorten :: Int -> String -> String
 shorten n xs | length xs < n = xs

@@ -3,7 +3,7 @@
  - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
  -
  - Licensed under the GNU GPL version 3 or higher
- - 
+ -
  -}
 
 module Config(LazymailConfig(..), defaultConfig, customConfig) where
@@ -13,17 +13,17 @@ import System.FilePath(FilePath)
 
 data LazymailConfig = LazymailConfig {
     baseColor       :: (Color, Color) -- (foreground, background)
-  , selectionColor  :: (Color, Color) 
-  , statusBarColor  :: (Color, Color)  
+  , selectionColor  :: (Color, Color)
+  , statusBarColor  :: (Color, Color)
   , showStatusBar   :: Bool
-  , initialPath     :: FilePath   
-}    
+  , initialPath     :: FilePath
+}
 
 defaultConfig = LazymailConfig {
     baseColor      = (ColorWhite, ColorBlack)
   , selectionColor = (ColorBlack, ColorWhite)
   , statusBarColor = (ColorBlack, ColorWhite)
-  , showStatusBar  = True                   
+  , showStatusBar  = True
   , initialPath    = ""
 }
 
@@ -32,4 +32,4 @@ defaultConfig = LazymailConfig {
 -- preferences. In a possible future maybe I'll work in a not-so-crappy
 -- config system.
 --
-customConfig = defaultConfig { initialPath = "/home/rul/mail/kalgan" }
+customConfig = defaultConfig { initialPath = "/home/rul/mail/linti/" }
