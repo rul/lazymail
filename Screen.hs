@@ -60,16 +60,14 @@ startCurses = do
 screenLoop :: LazymailCurses ()
 screenLoop = do
   w <- liftCurses $ defaultWindow
-  st <- get
   cfg <- ask
-  (_, st') <- liftCurses $ updateWindow w $ runStateT (runReaderT performUpdate cfg) st
-  put st'
+  get >>=  \st ->
+    (liftCurses . (updateWindow w) $ runStateT (runReaderT performUpdate cfg) st) >>= put . snd
   liftCurses $ render
   handleEvent
-  st <- get
-  if (not . exitRequested) st
-    then screenLoop
-    else return ()
+  get >>= \st -> if (not . exitRequested) st
+                 then screenLoop
+                 else return ()
 
 --performUpdate :: LazymailUpdate ()
 performUpdate = do
@@ -120,7 +118,6 @@ clearMain rows columns = do
       if currentRow < rows - 1
          then drawEmptyLine $ currentRow + 1
          else return ()
-
 
 -- | Helper function of drawMode
 drawIndexHelper [] = resetCurrentRow
