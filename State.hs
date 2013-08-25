@@ -89,6 +89,12 @@ initialColorStyle = ColorStyle {
   , statusBarColorID = defaultColorID
 }
 
+scrColsAsInteger st = toInteger $ screenColumns st
+scrRowsAsInteger st = toInteger $ screenRows st
+curRowAsInteger  st = toInteger $ currentRow st
+colPadAsInteger  st = toInteger $ columnPadding st
+
+
 
 {- data MState = MState {
     selectedRowMD   :: Integer -- Selected row in MaildirMode
@@ -146,11 +152,9 @@ decSelectedRow st | (selectedRow st) > 0 = case (mode st) of
                                              MaildirMode -> st { selectedRowMD = (selectedRowMD st) - 1 }
                                              IndexMode   -> st { selectedRowIn = (selectedRowIn st) - 1 }
                   | otherwise = st
-                                         
-selectedRow st = case (mode st) of
-      MaildirMode -> selectedRowMD st
-      IndexMode   -> selectedRowIn st
-
-scrColsAsInt st = fromIntegral $ scrColumns st
-scrRowsAsInt st = fromIntegral $ scrRows st
 -}
+
+selectedRow st = case (mode st) of
+      MaildirMode -> selectedRowMD . maildirState $ st
+      IndexMode   -> selectedRowIn . indexState   $ st
+

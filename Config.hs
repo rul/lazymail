@@ -16,7 +16,7 @@ data LazymailConfig = LazymailConfig {
   , selectionColor  :: (Color, Color) 
   , statusBarColor  :: (Color, Color)  
   , showStatusBar   :: Bool
-  , initialPath     :: Maybe FilePath   
+  , initialPath     :: FilePath   
 }    
 
 defaultConfig = LazymailConfig {
@@ -24,7 +24,7 @@ defaultConfig = LazymailConfig {
   , selectionColor = (ColorBlack, ColorWhite)
   , statusBarColor = (ColorBlack, ColorWhite)
   , showStatusBar  = True                   
-  , initialPath    = Nothing                   
+  , initialPath    = ""
 }
 
 --
@@ -32,4 +32,4 @@ defaultConfig = LazymailConfig {
 -- preferences. In a possible future maybe I'll work in a not-so-crappy
 -- config system.
 --
-customConfig = defaultConfig { initialPath = Just "/home/rul/mail/kalgan" }
+customConfig = defaultConfig { initialPath = "/home/rul/mail/kalgan" }

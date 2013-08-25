@@ -21,6 +21,7 @@ import System.Environment
 import System.Exit
 import System.FilePath(takeDirectory)
 
+import Lazymail
 import Email
 import Maildir
 import Screen
@@ -30,15 +31,15 @@ parse ["-h"] = usage   >> exit
 parse ["-v"] = version >> exit
 parse [md]   = do
   putStrLn $ "Maildirs directory: " ++ md
-  entryPoint $ initState { initPath = md }  
-         
-parse []= usage >> die
+  run entryPoint
+
+parse [] = usage >> die
 
 usage   = putStrLn . unlines $ usageText where
   usageText = ["Usage: ./Main [-vh] <maildirs>"
               ,"      where <maildirs> is a directory with Maildirs, or a Maildir itself."
               ,"      Lazymail will recursively search for Maildirs. "]
-              
+
 version = putStrLn "Haskell lazymail 0.0001"
 exit    = exitWith ExitSuccess
 die     = exitWith (ExitFailure 1)

@@ -3,7 +3,7 @@
  - Copyright 2013 Raúl Benencia <rul@kalgan.cc>
  -
  - Licensed under the GNU GPL version 3 or higher
- - 
+ -
  -}
 
 module Screen where
@@ -24,84 +24,106 @@ import Print
 import Rfc1342
 import State
 
+type LazymailUpdate = ReaderT LazymailConfig (StateT LazymailState Update)
 type LazymailCurses = ReaderT LazymailConfig (StateT LazymailState Curses)
-liftCurses = lift . lift 
+
+liftCurses = lift . lift
+liftUpdate  = lift . lift
 
 entryPoint :: Lazymail ()
 entryPoint = do
   st <- get
-  cfg <- ask
   maildirs <- liftIO $ getMaildirsRecursively $ basePath st
-  liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) st
+  let mdState = (maildirState st) { detectedMDs = maildirs  }
+  cfg <- ask
+  liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) (st { maildirState = mdState })
   return ()
-  
+
 startCurses :: LazymailCurses ()
 startCurses = do
   st <- get
-  (rows, columns) <- liftCurses $ do
+  cfg <- ask
+  (=<<) put $ liftCurses $ do
     UI.setEcho False
-    UI.screenSize  
-    
-  return ()                    
-  
-{-- | Main entry point
-entryPoint :: MState -> IO ()
-entryPoint st' = do
-  maildirs <- getMaildirsRecursively (initPath st')
-  putStrLn $ "We could get " ++ (show . length) maildirs ++ " maildirs."
-  runCurses $ do
-    setEcho False
-    (rows, columns) <- screenSize    
-    selColID <- newColorID ColorBlack ColorWhite 1
-    staColID <- newColorID ColorWhite ColorGreen 2
-    let st = st' {
-            scrRows = rows  - 1
-          , scrColumns = columns - 1
-          , selectedColorID = selColID
-          , statusColorID   = staColID
-          , detectedMDs = maildirs }
-    screenLoop st
-    
--- | This functions will loop til the user decides to leave
-screenLoop :: MState -> Curses ()    
-screenLoop st = do
-  w   <- defaultWindow
-  st' <- updateWindow w $ do
-    clearMain (scrRowsAsInt st) (scrColsAsInt st)
-    st'' <- drawMode (mode st) st
-    drawStatus st''
-    return st''
-  render
-  st'' <- handleEvent st'
-  if (not . exitRequested) st''
-    then screenLoop st''
+    (rows, cols) <- UI.screenSize
+    basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
+    selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
+    staColID <- newColorID (fst . statusBarColor $ cfg) (snd . statusBarColor $ cfg) 3
+    let style = ColorStyle basColID selColID staColID
+    return $ st { screenRows = fromIntegral rows
+                , screenColumns = fromIntegral cols
+                , colorStyle = style }
+  screenLoop
+
+{- This function will loop til the user decides to leave -}
+screenLoop :: LazymailCurses ()
+screenLoop = do
+  w <- liftCurses $ defaultWindow
+  st <- get
+  cfg <- ask
+  liftCurses $ updateWindow w $ do runStateT (runReaderT performUpdate cfg) st
+  liftCurses $ render
+  handleEvent
+  st <- get
+  if (not . exitRequested) st
+    then screenLoop
     else return ()
-         
+
+performUpdate :: LazymailUpdate ()
+performUpdate = do
+  st <- get
+  liftUpdate $ clearMain (scrRowsAsInteger st) (screenColumns st)
+  drawMode (mode st)
+  drawStatus
+
 -- | Pattern match on the received mode and draw it in the screen.
-drawMode :: Mode -> MState -> Update MState
-drawMode MaildirMode st = drawMaildirHelper st (detectedMDs st)
-drawMode EmailMode   st = drawEmailHelper st
-drawMode IndexMode   st = drawIndexHelper st $ (selectedEmails st)
+drawMode :: Mode -> LazymailUpdate ()
+drawMode MaildirMode = do
+  st <- get
+  let mdState = maildirState st
+  drawMaildirHelper $ detectedMDs mdState
+--drawMode EmailMode   = drawEmailHelper
+--drawMode IndexMode   = drawIndexHelper (selectedEmails st)
 
 -- | Helper function of drawMode
-drawMaildirHelper st [] = return $ st { curRow = 0 }
-drawMaildirHelper st (md:mds) = do
-  moveCursor (curRow st) (colPadding st)
-  st' <- if (selectedRow st == curRow st)
-         then do
-           setColor $ selectedColorID st
-           drawString $ normalizeLen (scrColsAsInt st) md
-           setColor defaultColorID
-           return $ st { selectedMD = md } 
-         else do
-           drawString $ normalizeLen (scrColsAsInt st) md
-           return st
-           
-  let limit = if showStatus st' then (scrRows st') - 1 else scrRows st'
-  if curRow st' < limit
-    then drawMaildirHelper (incCurRow st') mds
-    else return $ st' { curRow = 0 }
+drawMaildirHelper :: [FilePath] -> LazymailUpdate ()
+drawMaildirHelper [] = resetCurrentRow
+drawMaildirHelper (md:mds) = do
+  st <- get
+  (=<<) put $ liftUpdate $ do
+    moveCursor (curRowAsInteger st) (colPadAsInteger st)
+    if (selectedRow st == currentRow st)
+    then do
+      setColor $ selectionColorID . colorStyle $ st
+      drawString $ normalizeLen (screenColumns st) md
+      setColor $ baseColorID . colorStyle $ st
+      let mdState = (maildirState st) { selectedMD = md }
+      return $ st { maildirState = mdState }
+    else do
+      drawString $ normalizeLen (screenColumns st) md
+      return st
 
+  st <- get
+  let limit = if statusBar st then (screenRows st) - 1 else screenRows st
+  if currentRow st < limit
+    then do
+      put st { currentRow = (currentRow st) + 1 }
+      drawMaildirHelper mds
+    else
+      resetCurrentRow
+
+-- | Empty the whole window. Useful when changing modes.
+clearMain rows columns = do
+  drawEmptyLine 0
+  where
+    drawEmptyLine currentRow = do
+      moveCursor currentRow 0
+      drawString $ replicate (columns - 1) ' '
+      if currentRow < (rows - 1)
+         then drawEmptyLine $ currentRow + 1
+         else return ()
+
+{-
 -- | Helper function of drawMode
 drawIndexHelper st [] = return $ st { curRow = 0 } --moveCursor 0 0 >> return st 
 drawIndexHelper st ((fp, _, msg):ts) = do
@@ -149,16 +171,6 @@ drawEmailHelper st = do
           drawString xs
           if row < (scrRows st) then drawBody (row + 1) col xss else return ()
 
--- | Empty the whole window. Useful when changing modes.
-clearMain rows columns = do
-  drawEmptyLine 0
-  where
-    drawEmptyLine currentRow = do
-      moveCursor currentRow 0
-      drawString $ replicate (columns - 1) ' '
-      if currentRow < (rows - 1)
-         then drawEmptyLine $ currentRow + 1
-         else return ()
   
 -- | Convert a String to multiple Strings, cropped by the maximum column
 --   size if necessary.
@@ -168,55 +180,58 @@ formatBody body maxColumns = format [] [] body where
   format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
   format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
                                 | otherwise               = format (parsed ++ [acc]) "+" rest
-  
 
+-}
 -- | Draw a status line with the current mode and other stuff
-drawStatus st = do
-  moveCursor ((scrRows st) - 1) 0
-  setColor $ statusColorID st
-  drawString . normalizeLen (scrColsAsInt st) . concat $ drawStatusHelper (mode st) st
-  setColor defaultColorID
-  
+drawStatus  = do
+  st <- get
+  liftUpdate $ do
+    moveCursor ((scrRowsAsInteger st) - 2) 0
+    setColor $ statusBarColorID . colorStyle $ st
+    drawString . normalizeLen (screenColumns st) . concat $ drawStatusHelper (mode st) st
+    setColor $ baseColorID . colorStyle $ st
+
 drawStatusHelper MaildirMode st = ["Maildir listing - "
-                                  , "(", show ((+ 1) . selectedRowMD $ st), "/"
-                                  ,  show (length $ detectedMDs st), ")"]
-    
-drawStatusHelper IndexMode st = ["mode: Index - "
-                                , "(", show ((+ 1) . selectedRowIn $ st), "/"
-                                ,  show (length $ selectedEmails st), ")"]
+                                  , "(", show ((+ 1) . selectedRow $ st), "/"
+                                  ,  show (length $ detectedMDs . maildirState $ st), ")"]
+
+drawStatusHelper IndexMode st = ["mode: Index - "]
+--                                , "(", show ((+ 1) . selectedRow $ st), "/"
+--                                ,  show (length $ selectedEmails . indexState $ st), ")"]
 
 drawStatusHelper EmailMode st = ["mode: Email"]
 
 -- | Handle an event
---   TODO: Handle the events in a cleaner way.  
-handleEvent :: MState -> Curses MState
-handleEvent st = loop where
+--   TODO: Handle the events in a cleaner way.
+handleEvent :: LazymailCurses ()
+handleEvent = loop where
   loop = do
-    w <- defaultWindow
-    ev <- getEvent w Nothing
+    w <- liftCurses $ defaultWindow
+    ev <- liftCurses $ getEvent w Nothing
+    st <- get
     case ev of
       Nothing  -> loop
       Just ev' -> case ev' of
                     EventCharacter c | c == 'q' || c == 'Q' -> do
                       case (mode st) of
-                        IndexMode   -> return $ st { mode = MaildirMode }
-                        EmailMode   -> return $ st { mode = IndexMode }
-                        MaildirMode -> return $ st { exitRequested = True }
-  
-                    EventSpecialKey KeyUpArrow  -> return $ decSelectedRow st
-                    EventCharacter 'k'          -> return $ decSelectedRow st
-                    
-                    EventSpecialKey KeyDownArrow -> return $ incSelectedRow st
-                    EventCharacter 'j'           -> return $ incSelectedRow st
+                        IndexMode   -> put $ st { mode = MaildirMode }
+                        EmailMode   -> put $ st { mode = IndexMode }
+                        MaildirMode -> put $ st { exitRequested = True }
+
+{-                  EventSpecialKey KeyUpArrow  -> put $ decSelectedRow st
+                    EventCharacter 'k'          -> put $ decSelectedRow st
+
+                    EventSpecialKey KeyDownArrow -> put $ incSelectedRow st
+                    EventCharacter 'j'           -> put $ incSelectedRow st
 
                     EventSpecialKey KeyRightArrow -> do
                       case (mode st) of
-                        IndexMode   -> return $ st { mode = EmailMode }
-                        EmailMode   -> return st 
+                        IndexMode   -> put $ st { mode = EmailMode }
+                        EmailMode   -> return ()
                         MaildirMode -> do
-                          selEmails <-liftIO $ getAll . selectedMD $ st
-                          return $ st { mode = IndexMode, selectedEmails = selEmails }
-                    
+                          selEmails <- liftIO $ getAll . selectedMD $ st
+                          return $ st { mode = IndexMode, selectedEmails = selEmails } -}
+
                     _ ->  loop
 
--}
+resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
