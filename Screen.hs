@@ -69,7 +69,7 @@ screenLoop = do
                  then screenLoop
                  else return ()
 
---performUpdate :: LazymailUpdate ()
+performUpdate :: LazymailUpdate LazymailState
 performUpdate = do
   st <- get
   liftUpdate $ clearMain (scrRowsAsInteger st) (screenColumns st)
