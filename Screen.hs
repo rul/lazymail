@@ -34,9 +34,11 @@ liftUpdate  = lift . lift
 entryPoint :: Lazymail ()
 entryPoint = do
   st <- get
-  maildirs <- liftIO $ getMaildirsRecursively $ basePath st
-  let mdState = (maildirState st) { detectedMDs = maildirs  }
   cfg <- ask
+  maildirs <- liftIO $ do
+    mds <- getMaildirsRecursively $ basePath st
+    (filterMaildirsHook cfg) mds
+  let mdState = (maildirState st) { detectedMDs = maildirs  }
   liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) (st { maildirState = mdState })
   return ()
 
@@ -88,16 +90,18 @@ drawMaildirHelper :: [FilePath] -> LazymailUpdate ()
 drawMaildirHelper [] = resetCurrentRow
 drawMaildirHelper (md:mds) = do
   st <- get
+  cfg <- ask
+  let ppMd = (maildirDrawHook cfg) (basePath st) md
   liftUpdate $  moveCursor (curRowAsInteger st) (colPadAsInteger st)
   if (selectedRow st == currentRow st)
     then do
       liftUpdate $ do
         setColor $ selectionColorID . colorStyle $ st
-        drawString $ normalizeLen (screenColumns st) md
+        drawString $ normalizeLen (screenColumns st) ppMd
         setColor $ baseColorID . colorStyle $ st
       let maildirState' = (maildirState st) { selectedMD = md }
       put $ st { maildirState = maildirState' }
-    else liftUpdate $ drawString $ normalizeLen (screenColumns st) md
+    else liftUpdate $ drawString $ normalizeLen (screenColumns st) ppMd
 
   st <- get
   let limit = if statusBar st then (screenRows st) - 1 else screenRows st

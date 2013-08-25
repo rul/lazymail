@@ -108,6 +108,7 @@ incrementSelectedRow st | (selectedRow st) < limit = case (mode st) of
                                                    indexState' = (indexState st) { selectedRowIn = sr + 1 }
                                                  in
                                                   st { indexState = indexState' }
+                                               _ -> st
                         | otherwise = st
   where
     limit' = case (mode st) of
@@ -130,6 +131,7 @@ decrementSelectedRow st | (selectedRow st) > 0 = case (mode st) of
                                                  indexState' = (indexState st) { selectedRowIn = sr - 1 }
                                                in
                                                 st { indexState = indexState' }
+                                             _ -> st
                         | otherwise = st
 
 selectedRow st = case (mode st) of
