@@ -24,6 +24,48 @@ isMaildir fp = allM doesDirectoryExist [ fp
                                        , fp </> "new"
                                        , fp </> "tmp"]
 
+getMaildirEmails md = do
+  r <- (getReadEmails md)
+  n <- (getNewEmails md)
+  return $ r ++ n
+
+getReadEmails md = getDirectoryContents $ md </> "cur"
+getNewEmails  md = getDirectoryContents $ md </> "new"
+
+{- | Returns information about specific messages. -}
+getMessages :: Maildir -> [FilePath] -> IO [(FilePath, Flags, String)]
+getMessages mb list =  do
+  messages <- getAll mb
+  return $ filter (\(id, f, m) -> id `elem` list) messages
+
+--
+-- | Based on getRecursiveContents from Real World Haskell
+--
+getMaildirsRecursively :: FilePath -> IO [Maildir]
+getMaildirsRecursively topdir = do
+  result <- search topdir
+  includeTopDir <- isMaildir topdir
+  if includeTopDir
+     then return (topdir:result)
+     else return result
+
+  where
+    search topdir = do
+      names <- getDirectoryContents topdir
+      let properNames = filter (`notElem` [".", ".."]) names
+      paths <- forM properNames $ \name -> do
+        let path = topdir </> name
+        isDirectory <- doesDirectoryExist path
+        if isDirectory
+          then do
+            result <- search path
+            return ([path] ++ result)
+          else return []
+
+      filterM isMaildir (concat paths)
+
+
+{- The following code is an implementation of the Mailbox interface -}
 listIDs :: Maildir -> IO [FilePath]
 listIDs md = getNewIDs md `appendM` getReadIDs md
   where mxs `appendM` mxs' = do
@@ -72,42 +114,3 @@ getAll fp = do
   msgs <- mapM (\x -> hGetContents =<< openFile x ReadMode) ids
   let flags = map getFlags ids
   return $ zip3 ids flags msgs
-
-{- | Returns information about specific messages. -}
-getMessages :: Maildir -> [FilePath] -> IO [(FilePath, Flags, String)]
-getMessages mb list =  do
-  messages <- getAll mb
-  return $ filter (\(id, f, m) -> id `elem` list) messages
-
---
--- | Based on getRecursiveContents from Real World Haskell
---
-getMaildirsRecursively :: FilePath -> IO [Maildir]
-getMaildirsRecursively topdir = do
-  result <- search topdir
-  includeTopDir <- isMaildir topdir
-  if includeTopDir
-     then return (topdir:result)
-     else return result
-
-  where
-    search topdir = do
-      names <- getDirectoryContents topdir
-      let properNames = filter (`notElem` [".", ".."]) names
-      paths <- forM properNames $ \name -> do
-        let path = topdir </> name
-        isDirectory <- doesDirectoryExist path
-        if isDirectory
-          then do
-            result <- search path
-            return ([path] ++ result)
-          else return []
-
-      filterM isMaildir (concat paths)
-
--- Temporal code for testing purposes
-defaultPath = "/home/rul/mail/linti/INBOX.academic.c.questions"
-getFirstEmail = do
-  lst <- getAll defaultPath
-  let (_, _, msg) = head lst
-  return msg

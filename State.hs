@@ -39,10 +39,10 @@ data MaildirState = MaildirState {
 data IndexState = IndexState {
     selectedRowIn   :: Int
   , selectedEmail   :: Message
-  , selectedEmails  :: [(String, [Flag], String)]
+  , selectedEmails  :: [FilePath]
   , scrollRowIn     :: Int
   , currentInLen    :: Int
-  , scrollBufferIn  :: [(String, [Flag], String)]
+  , scrollBufferIn  :: [FilePath]
 }
 
 data ComposeState = ComposeState {

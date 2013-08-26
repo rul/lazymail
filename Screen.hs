@@ -4,6 +4,7 @@
  -
  - Licensed under the GNU GPL version 3 or higher
  -
+ - This code is in an urgent need of a big refactoring.
  -}
 
 module Screen where
@@ -12,24 +13,21 @@ import Control.Monad.Trans(liftIO)
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.List(isPrefixOf)
-import UI.NCurses as UI
-import Text.ParserCombinators.Parsec.Rfc2822(Message(..))
 import System.Exit
+import System.IO(IOMode(..), hGetContents, openFile)
+import Text.ParserCombinators.Parsec.Rfc2822(Message(..))
+import UI.NCurses
 
 -- Local imports
 import Config
+import qualified Handlers as EH
 import Lazymail
 import Maildir
 import Email
 import Print
 import Rfc1342
 import State
-
-type LazymailUpdate = ReaderT LazymailConfig (StateT LazymailState Update)
-type LazymailCurses = ReaderT LazymailConfig (StateT LazymailState Curses)
-
-liftCurses = lift . lift
-liftUpdate  = lift . lift
+import Types(LazymailCurses, LazymailUpdate)
 
 entryPoint :: Lazymail ()
 entryPoint = do
@@ -47,8 +45,8 @@ startCurses = do
   st <- get
   cfg <- ask
   (=<<) put $ liftCurses $ do
-    UI.setEcho False
-    (rows, cols) <- UI.screenSize
+    setEcho False
+    (rows, cols) <- screenSize
     basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
     selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
     staColID <- newColorID (fst . statusBarColor $ cfg) (snd . statusBarColor $ cfg) 3
@@ -125,15 +123,16 @@ clearMain rows columns = do
 
 -- | Helper function of drawMode
 drawIndexHelper [] = resetCurrentRow
-drawIndexHelper ((fp, _, msg):ts) = do
+drawIndexHelper (m:ms) = do
   st <- get
   (=<<) put $ liftUpdate $ do
+    msg <- liftToUpdate $ hGetContents =<< (openFile m ReadMode)
     moveCursor (curRowAsInteger st) (colPadAsInteger st)
     let email = parseEmail msg
     let fs = getFields email
     let str = normalizeLen (screenColumns st) . concat $
               [ show $ (currentRow st) + (scrollRowIn . indexState $ st) + 1
-              , (ppSep ++) $ ppFlags . getFlags $ fp
+              , (ppSep ++) $ ppFlags . getFlags $ m
               , (ppSep ++) $ ppIndexNameAddr . getFrom $ fs
               , (ppSep ++) $ ppIndexSubject . getSubject $ fs
               ]
@@ -153,7 +152,7 @@ drawIndexHelper ((fp, _, msg):ts) = do
   if currentRow st < limit
      then do
        incrementCurrentRow
-       drawIndexHelper ts
+       drawIndexHelper ms
      else resetCurrentRow
 
 -- | Helper function of drawMode
@@ -190,7 +189,7 @@ formatBody body maxColumns = format [] [] body where
                                 | otherwise               = format (parsed ++ [acc]) "+" rest
 
 
--- | Draw a status line with the current mode and other stuff
+{- Draw a status line with the current mode and other stuff -}
 drawStatus  = do
   st <- get
   liftUpdate $ do
@@ -219,63 +218,26 @@ handleEvent = loop where
     st <- get
     case ev of
       Nothing  -> loop
-      Just ev' -> case ev' of
-                    EventCharacter c | c == 'q' || c == 'Q' -> do
-                      case (mode st) of
-                        IndexMode   -> put $ st { mode = MaildirMode }
-                        EmailMode   -> put $ st { mode = IndexMode }
-                        MaildirMode -> put $ st { exitRequested = True }
+      Just ev' ->
+        case ev' of
+          EventCharacter 'q'            -> EH.previousMode (mode st)
 
-                    EventSpecialKey KeyUpArrow  -> decrementActions (mode st)
-                    EventCharacter 'k'          -> decrementActions (mode st)
+          EventSpecialKey KeyUpArrow    -> EH.decSelectedRow (mode st)
+          EventCharacter 'k'            -> EH.decSelectedRow (mode st)
 
-                    EventSpecialKey KeyDownArrow -> incrementActions (mode st)
-                    EventCharacter 'j'           -> incrementActions (mode st)
+          EventSpecialKey KeyDownArrow  -> EH.incSelectedRow (mode st)
+          EventCharacter 'j'            -> EH.incSelectedRow (mode st)
 
-                    EventSpecialKey KeyRightArrow -> do
-                      case (mode st) of
-                        IndexMode   -> put $ st { mode = EmailMode }
-                        EmailMode   -> return ()
-                        MaildirMode -> do
-                          selectedEmails' <- liftIO $ do
-                            let md = (selectedMD . maildirState) $ st
-                            getAll md
-                          let indexState' = (indexState st) { selectedEmails = selectedEmails'
-                                                            , currentInLen   = length selectedEmails'
-                                                            , scrollBufferIn = scrollCrop (scrollRowIn . indexState $ st) (screenRows st)  selectedEmails'
-                                                            }
-                          put $ st { mode = IndexMode, indexState = indexState' }
+          EventSpecialKey KeyEnter      -> EH.changeMode (mode st)
+          EventSpecialKey KeyRightArrow -> EH.changeMode (mode st)
 
-                    _ ->  loop
-
-{- Given a list, it returns the elements that will be in the next screen refresh
- - TODO: find a better name -}
-scrollCrop top rows xs = take rows $ drop top xs
-
-incrementActions IndexMode = do
-  st <- get
-  let inSt = indexState st
-  if (selectedRowIn inSt) > (div (screenRows st) 2)
-     then do
-       let scrollRowIn'    = scrollRowIn inSt + 1
-       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
-       let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
-       put st { indexState = inSt' }
-     else put $ incrementSelectedRow st
-incrementActions _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
-
-decrementActions IndexMode = do
-  st <- get
-  let inSt = indexState st
-  if (scrollRowIn inSt) > 0
-     then do
-       let scrollRowIn'    = scrollRowIn inSt - 1
-       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
-       let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
-       put st { indexState = inSt' }
-     else put $ decrementSelectedRow st
-decrementActions _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+          _ ->  loop
 
 resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
 incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (currentRow st) + 1 }
 
+liftCurses = lift . lift
+liftUpdate  = lift . lift
+
+liftToUpdate :: IO a -> Update a
+liftToUpdate io = Update $ lift (liftIO io)
