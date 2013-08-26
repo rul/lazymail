@@ -40,7 +40,6 @@ defaultConfig = LazymailConfig {
 --
 --customConfig = defaultConfig { initialPath = "/home/rul/mail/"}
 
-
 customConfig = defaultConfig { initialPath = "/home/rul/mail/linti"
                              , maildirDrawHook = indentedShow
                              , filterMaildirsHook = filterSymlinks }
@@ -55,7 +54,7 @@ indentedShow bp md =
       pad     = "  "
       numPads = (length $ filter (== '/') str) + (length $ filter (`elem` imapSep) str)
       imapSep = ['.'] -- IMAP usually separates its directories with dots
-  in (concat $ replicate (numPads - 1) pad) ++ pad ++ name
+  in (concat $ replicate (numPads - 1) pad) ++ name
 
 filterSymlinks :: [FilePath] -> IO [FilePath]
 filterSymlinks [] = return []

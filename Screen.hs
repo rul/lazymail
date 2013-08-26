@@ -77,12 +77,12 @@ performUpdate = do
   liftUpdate $ clearMain (scrRowsAsInteger st) (screenColumns st)
   drawMode (mode st)
   drawStatus
-  get >>= return
+  get
 
 {- Pattern match on the received mode and draw it in the screen. -}
 drawMode :: Mode -> LazymailUpdate ()
 drawMode MaildirMode = get >>= \st -> drawMaildirHelper $ detectedMDs . maildirState $ st
-drawMode IndexMode   = get >>= \st -> drawIndexHelper $ selectedEmails . indexState $  st
+drawMode IndexMode   = get >>= \st -> drawIndexHelper $ scrollBufferIn . indexState $ st
 drawMode EmailMode   = drawEmailHelper
 
 {- Helper function of drawMode -}
@@ -132,7 +132,7 @@ drawIndexHelper ((fp, _, msg):ts) = do
     let email = parseEmail msg
     let fs = getFields email
     let str = normalizeLen (screenColumns st) . concat $
-              [ show $ (currentRow st) + 1
+              [ show $ (currentRow st) + (scrollRowIn . indexState $ st) + 1
               , (ppSep ++) $ ppFlags . getFlags $ fp
               , (ppSep ++) $ ppIndexNameAddr . getFrom $ fs
               , (ppSep ++) $ ppIndexSubject . getSubject $ fs
@@ -204,8 +204,8 @@ drawStatusHelper MaildirMode st = ["Maildir listing - "
                                   ,  show (length $ detectedMDs . maildirState $ st), ")"]
 
 drawStatusHelper IndexMode st = ["mode: Index - "
-                                , "(", show ((+ 1) . selectedRow $ st), "/"
-                                ,  show (length $ selectedEmails . indexState $ st), ")"]
+                                , "(", show ((selectedRow st) + (scrollRowIn . indexState $ st) + 1), "/"
+                                ,  show (currentInLen . indexState $ st), ")"]
 
 drawStatusHelper EmailMode st = ["mode: Email"]
 
@@ -226,11 +226,11 @@ handleEvent = loop where
                         EmailMode   -> put $ st { mode = IndexMode }
                         MaildirMode -> put $ st { exitRequested = True }
 
-                    EventSpecialKey KeyUpArrow  -> put $ decrementSelectedRow st
-                    EventCharacter 'k'          -> put $ decrementSelectedRow st
+                    EventSpecialKey KeyUpArrow  -> decrementActions (mode st)
+                    EventCharacter 'k'          -> decrementActions (mode st)
 
-                    EventSpecialKey KeyDownArrow -> put $ incrementSelectedRow st
-                    EventCharacter 'j'           -> put $ incrementSelectedRow st
+                    EventSpecialKey KeyDownArrow -> incrementActions (mode st)
+                    EventCharacter 'j'           -> incrementActions (mode st)
 
                     EventSpecialKey KeyRightArrow -> do
                       case (mode st) of
@@ -240,10 +240,42 @@ handleEvent = loop where
                           selectedEmails' <- liftIO $ do
                             let md = (selectedMD . maildirState) $ st
                             getAll md
-                          let indexState' =  (indexState st) { selectedEmails = selectedEmails' }
+                          let indexState' = (indexState st) { selectedEmails = selectedEmails'
+                                                            , currentInLen   = length selectedEmails'
+                                                            , scrollBufferIn = scrollCrop (scrollRowIn . indexState $ st) (screenRows st)  selectedEmails'
+                                                            }
                           put $ st { mode = IndexMode, indexState = indexState' }
 
                     _ ->  loop
 
+{- Given a list, it returns the elements that will be in the next screen refresh
+ - TODO: find a better name -}
+scrollCrop top rows xs = take rows $ drop top xs
+
+incrementActions IndexMode = do
+  st <- get
+  let inSt = indexState st
+  if (selectedRowIn inSt) > (div (screenRows st) 2)
+     then do
+       let scrollRowIn'    = scrollRowIn inSt + 1
+       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
+       let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
+       put st { indexState = inSt' }
+     else put $ incrementSelectedRow st
+incrementActions _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
+
+decrementActions IndexMode = do
+  st <- get
+  let inSt = indexState st
+  if (scrollRowIn inSt) > 0
+     then do
+       let scrollRowIn'    = scrollRowIn inSt - 1
+       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
+       let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
+       put st { indexState = inSt' }
+     else put $ decrementSelectedRow st
+decrementActions _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+
 resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
 incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (currentRow st) + 1 }
+

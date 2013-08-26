@@ -40,6 +40,9 @@ data IndexState = IndexState {
     selectedRowIn   :: Int
   , selectedEmail   :: Message
   , selectedEmails  :: [(String, [Flag], String)]
+  , scrollRowIn     :: Int
+  , currentInLen    :: Int
+  , scrollBufferIn  :: [(String, [Flag], String)]
 }
 
 data ComposeState = ComposeState {
@@ -77,6 +80,9 @@ initialIndexState = IndexState {
     selectedRowIn  = 0
   , selectedEmail  = Message [] "Dummy email"
   , selectedEmails = []
+  , scrollRowIn    = 0
+  , currentInLen   = 0
+  , scrollBufferIn = []
 }
 
 initialComposeState = ComposeState {
