@@ -210,6 +210,3 @@ incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (cur
 
 liftCurses = lift . lift
 liftUpdate  = lift . lift
-
---liftToUpdate :: IO a -> Update a
---liftToUpdate io = Update $ lift (liftIO io)
