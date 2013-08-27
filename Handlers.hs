@@ -8,6 +8,8 @@
 module Handlers where
 
 import Control.Monad.State
+import Data.List(stripPrefix)
+import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
 
 import Email(parseEmail, getFields, getSubject, getFrom)
 import Maildir
@@ -93,3 +95,15 @@ formatIndexModeRows st = mapM formatRow where
               , (ppSep ++) $ ppIndexSubject . getSubject $ fs
               ]
     return (fp, str)
+    
+formatMaildirModeRows st = mapM formatRow where
+  formatRow fp = return $ (fp, (concat $ replicate (numPads - 1) pad) ++ name) where
+    bp      = basePath st
+    str     = case (stripPrefix bp fp) of
+                Nothing  -> fp
+                Just s    -> s
+    name'   = takeFileName . dropTrailingPathSeparator $ str
+    name    = takeFileName $ map (\x -> if x `elem` imapSep then '/' else x) name'
+    pad     = "  "
+    numPads = (length $ filter (== '/') str) + (length $ filter (`elem` imapSep) str)
+    imapSep = ['.'] -- IMAP usually separates its directories with dots

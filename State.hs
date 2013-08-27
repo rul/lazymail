@@ -33,7 +33,7 @@ data LazymailState = LazymailState {
 data MaildirState = MaildirState {
     selectedRowMD   :: Int
   , selectedMD      :: String
-  , detectedMDs     :: [String]
+  , detectedMDs     :: [(FilePath, String)]
 }
 
 data IndexState = IndexState {

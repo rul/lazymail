@@ -35,7 +35,8 @@ entryPoint = do
   maildirs <- liftIO $ do
     mds <- getMaildirsRecursively $ basePath st
     (filterMaildirsHook cfg) mds
-  let mdState = (maildirState st) { detectedMDs = maildirs  }
+  formattedMDs <- EH.formatMaildirModeRows st maildirs
+  let mdState = (maildirState st) { detectedMDs = formattedMDs }
   liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) (st { maildirState = mdState })
   return ()
 
@@ -78,27 +79,29 @@ performUpdate = do
 
 {- Pattern match on the received mode and draw it in the screen. -}
 drawMode :: Mode -> LazymailUpdate ()
-drawMode MaildirMode = get >>= \st -> drawMaildirHelper $ detectedMDs . maildirState $ st
-drawMode IndexMode   = get >>= \st -> drawIndexHelper $ scrollBufferIn . indexState $ st
+drawMode MaildirMode = get >>= \st -> drawSelectionList $ detectedMDs . maildirState $ st
+drawMode IndexMode   = get >>= \st -> drawSelectionList $ scrollBufferIn . indexState $ st
 drawMode EmailMode   = drawEmailHelper
 
-{- Helper function of drawMode -}
-drawMaildirHelper :: [FilePath] -> LazymailUpdate ()
-drawMaildirHelper [] = resetCurrentRow
-drawMaildirHelper (md:mds) = do
+drawSelectionList ((path, str):mds) = do
   st <- get
-  cfg <- ask
-  let ppMd = (maildirDrawHook cfg) (basePath st) md
-  liftUpdate $  moveCursor (curRowAsInteger st) (colPadAsInteger st)
-  if (selectedRow st == currentRow st)
-    then do
-      liftUpdate $ do
+  (=<<) put $ liftUpdate $ do
+    moveCursor (curRowAsInteger st) (colPadAsInteger st)
+    if (selectedRow st == currentRow st)
+      then do
         setColor $ selectionColorID . colorStyle $ st
-        drawString $ normalizeLen (screenColumns st) ppMd
+        drawString $ normalizeLen (screenColumns st) str
         setColor $ baseColorID . colorStyle $ st
-      let maildirState' = (maildirState st) { selectedMD = md }
-      put $ st { maildirState = maildirState' }
-    else liftUpdate $ drawString $ normalizeLen (screenColumns st) ppMd
+        case (mode st) of
+          MaildirMode -> do
+            let mst = (maildirState st) { selectedMD = path }
+            return $ st { maildirState = mst }
+          IndexMode   -> do
+            let ist = (indexState st) { selectedEmailPath = path }
+            return $ st { indexState = ist }
+      else do
+        drawString $ normalizeLen (screenColumns st) str
+        return st
 
   st <- get
   let limit = if statusBar st then (screenRows st) - 1 else screenRows st
@@ -119,31 +122,6 @@ clearMain rows columns = do
       if currentRow < rows - 1
          then drawEmptyLine $ currentRow + 1
          else return ()
-
--- | Helper function of drawMode
-drawIndexHelper [] = resetCurrentRow
-drawIndexHelper ((path, str):ms) = do
-  st <- get
-  (=<<) put $ liftUpdate $ do
-    moveCursor (curRowAsInteger st) (colPadAsInteger st)
-    if (selectedRow st == currentRow st)
-      then do
-        setColor $ selectionColorID . colorStyle $ st
-        drawString str
-        setColor $ baseColorID . colorStyle $ st
-        let indexState' = (indexState st) { selectedEmailPath = path }
-        return $ st { indexState = indexState' }
-      else do
-        drawString str
-        return st
-
-  st <- get
-  let limit = if statusBar st then (screenRows st) - 1 else screenRows st
-  if currentRow st < limit
-     then do
-       incrementCurrentRow
-       drawIndexHelper ms
-     else resetCurrentRow
 
 -- | Helper function of drawMode
 --   TODO: Make helpers functions to draw header and body in a separate way.
