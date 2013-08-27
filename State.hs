@@ -37,12 +37,13 @@ data MaildirState = MaildirState {
 }
 
 data IndexState = IndexState {
-    selectedRowIn   :: Int
-  , selectedEmail   :: Message
-  , selectedEmails  :: [FilePath]
-  , scrollRowIn     :: Int
-  , currentInLen    :: Int
-  , scrollBufferIn  :: [FilePath]
+    selectedRowIn     :: Int
+  , selectedEmail     :: Message
+  , selectedEmailPath :: FilePath
+  , selectedEmails    :: [(FilePath, String)]
+  , scrollRowIn       :: Int
+  , currentInLen      :: Int
+  , scrollBufferIn    :: [(FilePath, String)]
 }
 
 data ComposeState = ComposeState {
@@ -77,12 +78,13 @@ initialMaildirState = MaildirState {
 }
 
 initialIndexState = IndexState {
-    selectedRowIn  = 0
-  , selectedEmail  = Message [] "Dummy email"
-  , selectedEmails = []
-  , scrollRowIn    = 0
-  , currentInLen   = 0
-  , scrollBufferIn = []
+    selectedRowIn      = 0
+  , selectedEmail      = Message [] "Dummy email"
+  , selectedEmailPath  = ""
+  , selectedEmails     = []
+  , scrollRowIn        = 0
+  , currentInLen       = 0
+  , scrollBufferIn     = []
 }
 
 initialComposeState = ComposeState {
@@ -118,10 +120,13 @@ incrementSelectedRow st | (selectedRow st) < limit =
     _ -> st
                         | otherwise = st
   where
+    scrRows = screenRows st
     limit' = case (mode st) of
       MaildirMode -> (length $ detectedMDs . maildirState $ st ) - 1
-      IndexMode   -> (length $ selectedEmails . indexState $ st) - 1
-    limit = if (statusBar st) && (limit' == screenRows st)
+      IndexMode   -> if (currentInLen . indexState $ st) < scrRows
+                     then (currentInLen . indexState $ st) - 1
+                     else scrRows     
+    limit = if (statusBar st) && (limit' == scrRows)
             then fromIntegral $ limit' - 2
             else fromIntegral limit'
 

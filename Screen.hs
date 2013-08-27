@@ -14,7 +14,6 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Data.List(isPrefixOf)
 import System.Exit
-import System.IO(IOMode(..), hGetContents, openFile)
 import Text.ParserCombinators.Parsec.Rfc2822(Message(..))
 import UI.NCurses
 
@@ -123,25 +122,16 @@ clearMain rows columns = do
 
 -- | Helper function of drawMode
 drawIndexHelper [] = resetCurrentRow
-drawIndexHelper (m:ms) = do
+drawIndexHelper ((path, str):ms) = do
   st <- get
   (=<<) put $ liftUpdate $ do
-    msg <- liftToUpdate $ hGetContents =<< (openFile m ReadMode)
     moveCursor (curRowAsInteger st) (colPadAsInteger st)
-    let email = parseEmail msg
-    let fs = getFields email
-    let str = normalizeLen (screenColumns st) . concat $
-              [ show $ (currentRow st) + (scrollRowIn . indexState $ st) + 1
-              , (ppSep ++) $ ppFlags . getFlags $ m
-              , (ppSep ++) $ ppIndexNameAddr . getFrom $ fs
-              , (ppSep ++) $ ppIndexSubject . getSubject $ fs
-              ]
     if (selectedRow st == currentRow st)
       then do
         setColor $ selectionColorID . colorStyle $ st
         drawString str
         setColor $ baseColorID . colorStyle $ st
-        let indexState' = (indexState st) { selectedEmail = email}
+        let indexState' = (indexState st) { selectedEmailPath = path }
         return $ st { indexState = indexState' }
       else do
         drawString str
@@ -239,5 +229,5 @@ incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (cur
 liftCurses = lift . lift
 liftUpdate  = lift . lift
 
-liftToUpdate :: IO a -> Update a
-liftToUpdate io = Update $ lift (liftIO io)
+--liftToUpdate :: IO a -> Update a
+--liftToUpdate io = Update $ lift (liftIO io)

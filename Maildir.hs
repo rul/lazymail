@@ -29,8 +29,12 @@ getMaildirEmails md = do
   n <- (getNewEmails md)
   return $ r ++ n
 
-getReadEmails md = getDirectoryContents $ md </> "cur"
-getNewEmails  md = getDirectoryContents $ md </> "new"
+getReadEmails md = getEmails $ md </> "cur"
+getNewEmails  md = getEmails $ md </> "new"
+
+getEmails fp = do
+  contents <- getDirectoryContents fp
+  return $  map (fp </>) $ filter (`notElem` [".", ".."]) contents
 
 {- | Returns information about specific messages. -}
 getMessages :: Maildir -> [FilePath] -> IO [(FilePath, Flags, String)]
