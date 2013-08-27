@@ -83,6 +83,8 @@ drawMode MaildirMode = get >>= \st -> drawSelectionList $ detectedMDs . maildirS
 drawMode IndexMode   = get >>= \st -> drawSelectionList $ scrollBufferIn . indexState $ st
 drawMode EmailMode   = drawEmailHelper
 
+{- Draw a scrollable selection list -}
+drawSelectionList [] = resetCurrentRow
 drawSelectionList ((path, str):mds) = do
   st <- get
   (=<<) put $ liftUpdate $ do
@@ -108,7 +110,7 @@ drawSelectionList ((path, str):mds) = do
   if currentRow st < limit
     then do
       incrementCurrentRow
-      drawMaildirHelper mds
+      drawSelectionList mds
     else
       resetCurrentRow
 
@@ -166,13 +168,15 @@ drawStatus  = do
     drawString . normalizeLen (screenColumns st) . concat $ drawStatusHelper (mode st) st
     setColor $ baseColorID . colorStyle $ st
 
-drawStatusHelper MaildirMode st = ["Maildir listing - "
-                                  , "(", show ((+ 1) . selectedRow $ st), "/"
-                                  ,  show (length $ detectedMDs . maildirState $ st), ")"]
+drawStatusHelper MaildirMode st =
+  ["Maildir listing - "
+  , "(", show ((+ 1) . selectedRow $ st), "/"
+  ,  show (length $ detectedMDs . maildirState $ st), ")"]
 
-drawStatusHelper IndexMode st = ["mode: Index - "
-                                , "(", show ((selectedRow st) + (scrollRowIn . indexState $ st) + 1), "/"
-                                ,  show (currentInLen . indexState $ st), ")"]
+drawStatusHelper IndexMode st =
+  ["mode: Index - "
+  , "(", show ((selectedRow st) + (scrollRowIn . indexState $ st) + 1), "/"
+  ,  show (currentInLen . indexState $ st), ")"]
 
 drawStatusHelper EmailMode st = ["mode: Email"]
 
