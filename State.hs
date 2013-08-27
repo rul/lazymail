@@ -101,20 +101,21 @@ curRowAsInteger  st = toInteger $ currentRow st
 colPadAsInteger  st = toInteger $ columnPadding st
 
 
-incrementSelectedRow st | (selectedRow st) < limit = case (mode st) of
-                                               MaildirMode ->
-                                                 let
-                                                   sr = (selectedRowMD . maildirState) st
-                                                   maildirState' = (maildirState st) { selectedRowMD = sr + 1 }
-                                                 in
-                                                  st { maildirState = maildirState' }
-                                               IndexMode ->
-                                                 let
-                                                   sr = (selectedRowIn . indexState) st
-                                                   indexState' = (indexState st) { selectedRowIn = sr + 1 }
-                                                 in
-                                                  st { indexState = indexState' }
-                                               _ -> st
+incrementSelectedRow st | (selectedRow st) < limit =
+  case (mode st) of
+    MaildirMode ->
+      let
+        sr = (selectedRowMD . maildirState) st
+        maildirState' = (maildirState st) { selectedRowMD = sr + 1 }
+      in
+       st { maildirState = maildirState' }
+    IndexMode ->
+      let
+        sr = (selectedRowIn . indexState) st
+        indexState' = (indexState st) { selectedRowIn = sr + 1 }
+      in
+       st { indexState = indexState' }
+    _ -> st
                         | otherwise = st
   where
     limit' = case (mode st) of
@@ -124,20 +125,21 @@ incrementSelectedRow st | (selectedRow st) < limit = case (mode st) of
             then fromIntegral $ limit' - 2
             else fromIntegral limit'
 
-decrementSelectedRow st | (selectedRow st) > 0 = case (mode st) of
-                                             MaildirMode ->
-                                               let
-                                                 sr = (selectedRowMD . maildirState) st
-                                                 maildirState' = (maildirState st) { selectedRowMD = sr - 1 }
-                                               in
-                                                st { maildirState = maildirState' }
-                                             IndexMode ->
-                                               let
-                                                 sr = (selectedRowIn . indexState) st
-                                                 indexState' = (indexState st) { selectedRowIn = sr - 1 }
-                                               in
-                                                st { indexState = indexState' }
-                                             _ -> st
+decrementSelectedRow st | (selectedRow st) > 0 =
+  case (mode st) of
+    MaildirMode ->
+      let
+        sr = (selectedRowMD . maildirState) st
+        maildirState' = (maildirState st) { selectedRowMD = sr - 1 }
+      in
+       st { maildirState = maildirState' }
+    IndexMode ->
+      let
+        sr = (selectedRowIn . indexState) st
+        indexState' = (indexState st) { selectedRowIn = sr - 1 }
+      in
+       st { indexState = indexState' }
+    _ -> st
                         | otherwise = st
 
 selectedRow st = case (mode st) of
