@@ -37,7 +37,7 @@ defaultConfig = LazymailConfig {
 --
 --customConfig = defaultConfig { initialPath = "/home/rul/mail/"}
 
-customConfig = defaultConfig { initialPath = "/home/rul/mail/linti"
+customConfig = defaultConfig { initialPath = "/home/rul/mail/"
                              , filterMaildirsHook = filterSymlinks }
 
 filterSymlinks :: [FilePath] -> IO [FilePath]

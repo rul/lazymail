@@ -54,6 +54,8 @@ startCurses = do
     return $ st { screenRows = fromIntegral $ rows - 1
                 , screenColumns = fromIntegral $ cols
                 , colorStyle = style }
+      
+  resetScrollBuffer
   screenLoop
 
 {- This function will loop til the user decides to leave -}
@@ -79,7 +81,7 @@ performUpdate = do
 
 {- Pattern match on the received mode and draw it in the screen. -}
 drawMode :: Mode -> LazymailUpdate ()
-drawMode MaildirMode = get >>= \st -> drawSelectionList $ detectedMDs . maildirState $ st
+drawMode MaildirMode = get >>= \st -> drawSelectionList $ scrollBufferMD . maildirState $ st
 drawMode IndexMode   = get >>= \st -> drawSelectionList $ scrollBufferIn . indexState $ st
 drawMode EmailMode   = drawEmailHelper
 
@@ -170,7 +172,7 @@ drawStatus  = do
 
 drawStatusHelper MaildirMode st =
   ["Maildir listing - "
-  , "(", show ((+ 1) . selectedRow $ st), "/"
+  , "(", show ((selectedRow st) + (scrollRowMD . maildirState $ st) + 1), "/"
   ,  show (length $ detectedMDs . maildirState $ st), ")"]
 
 drawStatusHelper IndexMode st =
@@ -207,6 +209,18 @@ handleEvent = loop where
 
 resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
 incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (currentRow st) + 1 }
+
+resetScrollBuffer = do
+  st <- get
+  case (mode st) of
+    MaildirMode -> do
+      let mst = (maildirState st) {
+            scrollBufferMD = EH.scrollCrop 0 (screenRows st) $ detectedMDs . maildirState $ st }
+      put st { maildirState = mst}    
+    IndexMode -> do
+      let ist = (indexState st) {
+            scrollBufferIn = EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
+      put st { indexState = ist }    
 
 liftCurses = lift . lift
 liftUpdate  = lift . lift

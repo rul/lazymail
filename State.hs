@@ -34,6 +34,9 @@ data MaildirState = MaildirState {
     selectedRowMD   :: Int
   , selectedMD      :: String
   , detectedMDs     :: [(FilePath, String)]
+  , scrollRowMD     :: Int
+  , scrollBufferMD  :: [(FilePath, String)]
+    
 }
 
 data IndexState = IndexState {
@@ -72,9 +75,11 @@ initialState = LazymailState {
 }
 
 initialMaildirState = MaildirState {
-    selectedRowMD = 0
-  , selectedMD    = ""
-  , detectedMDs   = []
+    selectedRowMD  = 0
+  , selectedMD     = ""
+  , detectedMDs    = []
+  , scrollRowMD    = 0
+  , scrollBufferMD = []
 }
 
 initialIndexState = IndexState {
@@ -121,11 +126,11 @@ incrementSelectedRow st | (selectedRow st) < limit =
                         | otherwise = st
   where
     scrRows = screenRows st
+    curInLen = length $ selectedEmails . indexState $ st
+    curMDLen = length $ detectedMDs . maildirState $ st
     limit' = case (mode st) of
-      MaildirMode -> (length $ detectedMDs . maildirState $ st ) - 1
-      IndexMode   -> if (currentInLen . indexState $ st) < scrRows
-                     then (currentInLen . indexState $ st) - 1
-                     else scrRows     
+      MaildirMode -> if curMDLen < scrRows then curMDLen - 1 else scrRows
+      IndexMode   -> if curInLen < scrRows then curInLen - 1 else scrRows     
     limit = if (statusBar st) && (limit' == scrRows)
             then fromIntegral $ limit' - 2
             else fromIntegral limit'
