@@ -15,7 +15,7 @@ import Email(parseEmail, getFields, getSubject, getFrom)
 import Maildir
 import Print
 import State
-import System.IO(IOMode(..), hGetContents, openFile)
+import qualified System.IO.UTF8 as UTF8
 import Types (LazymailCurses)
 
 previousMode :: Mode -> LazymailCurses ()
@@ -30,7 +30,7 @@ changeMode :: Mode -> LazymailCurses ()
 changeMode EmailMode   = return ()
 changeMode IndexMode   = do
   st <- get
-  msg <- liftIO $ readFile . selectedEmailPath . indexState $ st
+  msg <- liftIO $ UTF8.readFile . selectedEmailPath . indexState $ st
   let ist = (indexState st) { selectedEmail = (parseEmail msg) }
   put $ st { mode = EmailMode, indexState = ist }
   
@@ -123,7 +123,7 @@ scrollCrop top rows xs = take rows $ drop top xs
 
 formatIndexModeRows st = mapM formatRow where
   formatRow fp = do
-    msg <- hGetContents =<< (openFile fp ReadMode)
+    msg <- UTF8.readFile fp
     let email = parseEmail msg
     let fs = getFields email
     let str = normalizeLen (screenColumns st) . concat $

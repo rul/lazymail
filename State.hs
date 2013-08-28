@@ -57,6 +57,7 @@ data ColorStyle = ColorStyle {
     baseColorID      :: ColorID
   , selectionColorID :: ColorID
   , statusBarColorID :: ColorID
+  , headerColorID    :: ColorID    
 }
 
 initialState = LazymailState {
@@ -100,6 +101,7 @@ initialColorStyle = ColorStyle {
     baseColorID      = defaultColorID
   , selectionColorID = defaultColorID
   , statusBarColorID = defaultColorID
+  , headerColorID    = defaultColorID                       
 }
 
 scrColsAsInteger st = toInteger $ screenColumns st

@@ -50,7 +50,8 @@ startCurses = do
     basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
     selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
     staColID <- newColorID (fst . statusBarColor $ cfg) (snd . statusBarColor $ cfg) 3
-    let style = ColorStyle defaultColorID selColID staColID
+    heaColID <- newColorID (fst . headerColor $ cfg) (snd . headerColor $ cfg) 3
+    let style = ColorStyle defaultColorID selColID staColID heaColID
     return $ st { screenRows = fromIntegral $ rows - 1
                 , screenColumns = fromIntegral $ cols
                 , colorStyle = style }
@@ -135,15 +136,18 @@ drawEmailHelper = do
   let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
   let row = curRowAsInteger st
   liftUpdate $ do
+    setColor $ headerColorID . colorStyle $ st
     moveCursor row (colPadAsInteger st)
     drawString $ ("From: " ++) $ cropWith "From: " . ppNameAddr . getFrom $ fs
     moveCursor (row + 1) (colPadAsInteger st)
     drawString $ ("To: " ++) $ cropWith "To: " . ppNameAddr . getTo $ fs
     moveCursor (row + 2) (colPadAsInteger st)
     drawString $ ("Subject: " ++) $ cropWith "Subject: " . ppSubject . getSubject $ fs
+    setColor $ baseColorID . colorStyle $ st
 
   let body = getBody $ selectedEmail . indexState $ st
-  liftUpdate $ drawBody (row + 4) (colPadAsInteger st) (scrRowsAsInteger st) $ formatBody body (screenColumns st)
+  let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
+  liftUpdate $ drawBody (row + 4) (colPadAsInteger st) maxRows $ formatBody body (screenColumns st)
 
   where drawBody _ _ _ [] = return ()
         drawBody row col maxRows (xs:xss) = do

@@ -16,6 +16,7 @@ data LazymailConfig = LazymailConfig {
     baseColor          :: (Color, Color) -- (foreground, background)
   , selectionColor     :: (Color, Color)
   , statusBarColor     :: (Color, Color)
+  , headerColor        :: (Color, Color)  
   , showStatusBar      :: Bool
   , initialPath        :: FilePath
   , filterMaildirsHook :: [FilePath] -> IO [FilePath]
@@ -25,6 +26,7 @@ defaultConfig = LazymailConfig {
     baseColor          = (ColorWhite, ColorBlack)
   , selectionColor     = (ColorYellow, ColorBlack)
   , statusBarColor     = (ColorYellow, ColorBlack)
+  , headerColor        = (ColorYellow, ColorBlack)                         
   , showStatusBar      = True
   , initialPath        = ""
   , filterMaildirsHook =  \mds -> return mds
