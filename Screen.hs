@@ -28,6 +28,7 @@ import Rfc1342
 import State
 import Types(LazymailCurses, LazymailUpdate)
 
+{- This function is the nexus between Curses and IO -}
 entryPoint :: Lazymail ()
 entryPoint = do
   st <- get
@@ -40,6 +41,8 @@ entryPoint = do
   liftIO $ runCurses $ runStateT (runReaderT startCurses cfg) (st { maildirState = mdState })
   return ()
 
+{- Initial point of screen related functions. Get the number of rows,
+ - colors, and start drawing the modes -}
 startCurses :: LazymailCurses ()
 startCurses = do
   st <- get
@@ -72,6 +75,7 @@ screenLoop = do
                  then screenLoop
                  else return ()
 
+{- Perform the screen for the next update. A clean is made -}
 performUpdate :: LazymailUpdate LazymailState
 performUpdate = do
   st <- get
@@ -128,14 +132,23 @@ clearMain rows columns = do
          then drawEmptyLine $ currentRow + 1
          else return ()
 
--- | Helper function of drawMode
---   TODO: Make helpers functions to draw header and body in a separate way.
+{- Helper function of drawMode -}
 drawEmailHelper = do
+  drawEmailHeader
+
   st <- get
-  let fs = getFields $ selectedEmail . indexState $ st
-  let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
-  let row = curRowAsInteger st
+  let body = getBody $ selectedEmail . indexState $ st
+  let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
+  let emailLines = formatBody body $ (screenColumns st) - 1
+  drawBody ((curRowAsInteger st) + 4) (colPadAsInteger st) maxRows emailLines
+          
+{- Draw the email headers -}
+drawEmailHeader = do
+  st <- get
   liftUpdate $ do
+    let fs = getFields $ selectedEmail . indexState $ st
+    let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
+    let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st
     moveCursor row (colPadAsInteger st)
     drawString $ ("From: " ++) $ cropWith "From: " . ppNameAddr . getFrom $ fs
@@ -144,26 +157,13 @@ drawEmailHelper = do
     moveCursor (row + 2) (colPadAsInteger st)
     drawString $ ("Subject: " ++) $ cropWith "Subject: " . ppSubject . getSubject $ fs
     setColor $ baseColorID . colorStyle $ st
-
-  let body = getBody $ selectedEmail . indexState $ st
-  let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
-  liftUpdate $ drawBody (row + 4) (colPadAsInteger st) maxRows $ formatBody body (screenColumns st)
-
-  where drawBody _ _ _ [] = return ()
-        drawBody row col maxRows (xs:xss) = do
-          moveCursor row col
-          drawString xs
-          if row <  maxRows then drawBody (row + 1) col maxRows  xss else return ()
-
--- | Convert a String to multiple Strings, cropped by the maximum column
---   size if necessary.
-formatBody :: String -> Int -> [String]
-formatBody body maxColumns = format [] [] body where
-  format parsed acc []                     = parsed ++ [acc]
-  format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
-  format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
-                                | otherwise               = format (parsed ++ [acc]) "+" rest
-
+  
+{- Draw the email body -}  
+drawBody _ _ _ [] = return ()
+drawBody row col maxRows (xs:xss) = liftUpdate $ do
+  moveCursor row col
+  drawString xs
+  if row <  maxRows then drawBody (row + 1) col maxRows  xss else return ()
 
 {- Draw a status line with the current mode and other stuff -}
 drawStatus  = do
@@ -174,20 +174,23 @@ drawStatus  = do
     drawString . normalizeLen (screenColumns st) . concat $ drawStatusHelper (mode st) st
     setColor $ baseColorID . colorStyle $ st
 
+{- Status bar string for Maildir mode -}
 drawStatusHelper MaildirMode st =
   ["Maildir listing - "
   , "(", show ((selectedRow st) + (scrollRowMD . maildirState $ st) + 1), "/"
   ,  show (length $ detectedMDs . maildirState $ st), ")"]
 
+{- Status bar string for Index mode -}
 drawStatusHelper IndexMode st =
   ["mode: Index - "
   , "(", show ((selectedRow st) + (scrollRowIn . indexState $ st) + 1), "/"
   ,  show (currentInLen . indexState $ st), ")"]
 
+{- Status bar string for Email mode -}
 drawStatusHelper EmailMode st = ["mode: Email"]
 
--- | Handle an event
---   TODO: Handle the events in a cleaner way.
+{- Handle an event
+ - TODO: Handle the events in a cleaner way. -}
 handleEvent :: LazymailCurses ()
 handleEvent = loop where
   loop = do
@@ -211,9 +214,13 @@ handleEvent = loop where
 
           _ ->  loop
 
+{- Reset the current row to the beginning -}
 resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
+
+{- Advance the current row. Useful when drawing modes -}
 incrementCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = (currentRow st) + 1 }
 
+{- Put the scroll at the top -}
 resetScrollBuffer = do
   st <- get
   case (mode st) of
@@ -226,5 +233,7 @@ resetScrollBuffer = do
             scrollBufferIn = EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
       put st { indexState = ist }    
 
+
+-- The type system complains if I want to use the same function for diferents monads
 liftCurses = lift . lift
 liftUpdate  = lift . lift
