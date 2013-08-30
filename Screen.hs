@@ -75,7 +75,7 @@ screenLoop = do
                  then screenLoop
                  else return ()
 
-{- Perform the screen for the next update. A clean is made -}
+{- Perform the screen update, by cleaning it first. -}
 performUpdate :: LazymailUpdate LazymailState
 performUpdate = do
   st <- get
@@ -137,7 +137,7 @@ drawEmailHelper = do
   drawEmailHeader
 
   st <- get
-  let body = getBody $ selectedEmail . indexState $ st
+  let body = getBody $ currentEmail . emailState $ st
   let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
   let emailLines = formatBody body $ (screenColumns st) - 1
   liftUpdate $ drawBody ((curRowAsInteger st) + 4) (colPadAsInteger st) maxRows emailLines
@@ -146,7 +146,7 @@ drawEmailHelper = do
 drawEmailHeader = do
   st <- get
   liftUpdate $ do
-    let fs = getFields $ selectedEmail . indexState $ st
+    let fs = getFields $ currentEmail . emailState $ st
     let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
     let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st

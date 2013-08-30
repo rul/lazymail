@@ -11,7 +11,7 @@ import Control.Monad.State
 import Data.List(stripPrefix)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
 
-import Email(parseEmail, getFields, getSubject, getFrom)
+import Email(parseEmail, getFields, getSubject, getFrom, getBody, formatBody)
 import Maildir
 import Print
 import State
@@ -23,7 +23,7 @@ previousMode MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested 
 previousMode EmailMode   = (=<<) put $ get >>= \st -> return st { mode = IndexMode }
 previousMode IndexMode   = do
   st <- get
-  let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }  
+  let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }
   put $ st { mode = MaildirMode, indexState = ist }
 
 changeMode :: Mode -> LazymailCurses ()
@@ -31,9 +31,13 @@ changeMode EmailMode   = return ()
 changeMode IndexMode   = do
   st <- get
   msg <- liftIO $ UTF8.readFile . selectedEmailPath . indexState $ st
-  let ist = (indexState st) { selectedEmail = (parseEmail msg) }
-  put $ st { mode = EmailMode, indexState = ist }
-  
+  let email = parseEmail msg
+  let body = getBody $ email
+  let el = formatBody body $ screenColumns st
+  let sbe = scrollCrop 0 (screenRows st) el
+  let est = (emailState st) { currentEmail = email, emailLines = el, scrollBufferEm = sbe }
+  put $ st { mode = EmailMode, emailState = est }
+
 changeMode MaildirMode =  do
   st <- get
   selectedEmails' <- liftIO $ do
@@ -64,7 +68,7 @@ incSelectedRow IndexMode = do
        put st { indexState = inSt' }
      else -- Move the selected row
        put $ incrementSelectedRow st
-       
+
 incSelectedRow MaildirMode = do
   st <- get
   let mdSt = maildirState st
@@ -88,9 +92,9 @@ incSelectedRow _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
 decSelectedRow IndexMode = do
   st <- get
   let inSt = indexState st
-  let selRow = selectedRowIn inSt      
+  let selRow = selectedRowIn inSt
   let startScrolling = (div (screenRows st) 4)
-  let topScrollRow = scrollRowIn inSt      
+  let topScrollRow = scrollRowIn inSt
   if topScrollRow > 0 && selRow < startScrolling
      then do
        let scrollRowIn'    = scrollRowIn inSt - 1
@@ -99,13 +103,13 @@ decSelectedRow IndexMode = do
        put st { indexState = inSt' }
       else
         put $ decrementSelectedRow st
-        
+
 decSelectedRow MaildirMode = do
   st <- get
   let mdSt = maildirState st
-  let selRow = selectedRowMD mdSt      
+  let selRow = selectedRowMD mdSt
   let startScrolling = (div (screenRows st) 4)
-  let topScrollRow = scrollRowMD mdSt      
+  let topScrollRow = scrollRowMD mdSt
   if topScrollRow > 0 && selRow < startScrolling
      then do
        let scrollRowMD'    = scrollRowMD mdSt - 1
@@ -114,7 +118,7 @@ decSelectedRow MaildirMode = do
        put st { maildirState = mdSt' }
       else
         put $ decrementSelectedRow st
-        
+
 decSelectedRow _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
 
 {- Given a list, it returns the elements that will be in the next screen refresh
@@ -132,7 +136,7 @@ formatIndexModeRows st = mapM formatRow where
               , (ppSep ++) $ ppIndexSubject . getSubject $ fs
               ]
     return (fp, str)
-    
+
 formatMaildirModeRows st = mapM formatRow where
   formatRow fp = return $ (fp, (concat $ replicate (numPads - 1) pad) ++ name) where
     bp      = basePath st

@@ -41,7 +41,6 @@ data MaildirState = MaildirState {
 
 data IndexState = IndexState {
     selectedRowIn     :: Int
-  , selectedEmail     :: Message
   , selectedEmailPath :: FilePath
   , selectedEmails    :: [(FilePath, String)]
   , scrollRowIn       :: Int
@@ -57,6 +56,7 @@ data EmailState = EmailState {
     scrollBufferEm :: [String]
   , scrollRowEm    :: Int
   , emailLines     :: [String]
+  , currentEmail  :: Message
 }
 
 data ColorStyle = ColorStyle {
@@ -92,7 +92,6 @@ initialMaildirState = MaildirState {
 
 initialIndexState = IndexState {
     selectedRowIn      = 0
-  , selectedEmail      = Message [] "Dummy email"
   , selectedEmailPath  = ""
   , selectedEmails     = []
   , scrollRowIn        = 0
@@ -104,6 +103,7 @@ initialEmailState = EmailState {
     scrollBufferEm = []
   , scrollRowEm    = 0
   , emailLines     = []
+  , currentEmail   = Message [] "Dummy email"
 }
 
 initialComposeState = ComposeState {
