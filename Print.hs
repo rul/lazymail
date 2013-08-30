@@ -8,24 +8,29 @@
 
 module Print where
 
+import Data.Char (isSpace)
+import Data.List (intercalate)
 import Network.Email.Mailbox(Flag(..), Flags)
 import Text.ParserCombinators.Parsec.Rfc2822(NameAddr(..))
-import Data.Char ( isSpace )
 
 import Email
 import Rfc1342
 
 nameLen = 20
-ppNameAddr nas = concat $ map ppNameAddr' nas
+ppNameAddr nas = intercalate ", " $ map ppNameAddr' nas
   where ppNameAddr' na = case nameAddr_name na of
                            Nothing -> nameAddr_addr na
-                           Just n  -> decodeField n
+                           Just n  -> (decodeField n) ++ " <" ++ nameAddr_addr na ++ ">"
 
-ppIndexNameAddr = normalizeLen nameLen . ppNameAddr
+ppIndexNameAddr nas = normalizeLen nameLen $ concat $ map ppNameAddr' nas
+  where ppNameAddr' na = case nameAddr_name na of
+                           Nothing -> nameAddr_addr na
+                           Just n  -> (decodeField n)
 
 subjectLen = 90
-ppSubject = decodeField
-ppIndexSubject = normalizeLen subjectLen . ppSubject
+ppSubject = flat . decodeField
+
+flat xs = intercalate " " $ map (dropWhile isSpace) $ map (filter (/= '\r')) $ lines xs
 
 ppFlags :: Flags -> String
 ppFlags = map ppFlag

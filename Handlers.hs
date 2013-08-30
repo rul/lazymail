@@ -7,6 +7,7 @@
 
 module Handlers where
 
+import Data.List(intercalate)
 import Control.Monad.State
 import Data.List(stripPrefix)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
@@ -151,10 +152,10 @@ formatIndexModeRows st = mapM formatRow where
     msg <- UTF8.readFile fp
     let email = parseEmail msg
     let fs = getFields email
-    let str = normalizeLen (screenColumns st) . concat $
-              [ (ppSep ++) $ ppFlags . getFlags $ fp
-              , (ppSep ++) $ ppIndexNameAddr . getFrom $ fs
-              , (ppSep ++) $ ppIndexSubject . getSubject $ fs
+    let str = normalizeLen (screenColumns st) $ intercalate ppSep $
+              [ ppFlags . getFlags $ fp
+              , ppIndexNameAddr . getFrom $ fs
+              , ppSubject . getSubject $ fs
               ]
     return (fp, str)
 

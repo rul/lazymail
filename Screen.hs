@@ -152,11 +152,11 @@ drawEmailHeader = do
     let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st
     moveCursor row (colPadAsInteger st)
-    drawString $ ("From: " ++) $ cropWith "From: " . ppNameAddr . getFrom $ fs
+    drawCroppedString st $ ("From: " ++) $ ppNameAddr . getFrom $ fs
     moveCursor (row + 1) (colPadAsInteger st)
-    drawString $ ("To: " ++) $ cropWith "To: " . ppNameAddr . getTo $ fs
+    drawCroppedString st $ ("To: " ++) $ ppNameAddr . getTo $ fs
     moveCursor (row + 2) (colPadAsInteger st)
-    drawString $ ("Subject: " ++) $ cropWith "Subject: " . ppSubject . getSubject $ fs
+    drawCroppedString st $ ("Subject: " ++) $ ppSubject . getSubject $ fs
     setColor $ baseColorID . colorStyle $ st
   put $ st { currentRow = (4 + currentRow st) }
 
@@ -235,6 +235,7 @@ resetScrollBuffer = do
             scrollBufferIn = EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
       put st { indexState = ist }
 
+drawCroppedString st str = drawString $ normalizeLen (screenColumns st) str
 
 -- The type system complains if I want to use the same function for diferents monads
 liftCurses = lift . lift
