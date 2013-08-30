@@ -34,8 +34,7 @@ changeMode IndexMode   = do
   let email = parseEmail msg
   let body = getBody $ email
   let el = formatBody body $ screenColumns st
-  let sbe = scrollCrop 0 (screenRows st) el
-  let est = (emailState st) { currentEmail = email, emailLines = el, scrollBufferEm = sbe }
+  let est = (emailState st) { currentEmail = email, emailLines = el, scrollRowEm = 0 }
   put $ st { mode = EmailMode, emailState = est }
 
 changeMode MaildirMode =  do
@@ -85,6 +84,17 @@ incSelectedRow MaildirMode = do
        put st { maildirState = mdSt' }
      else -- Move the selected row
        put $ incrementSelectedRow st
+
+incSelectedRow EmailMode = do
+  st <- get
+  let est = emailState st
+  let cur = scrollRowEm est
+  let scrRows = screenRows st
+  let totalRows = length $ emailLines est
+  let est' = est { scrollRowEm = (cur + 1) }
+
+  when ((totalRows - scrRows) > (scrollRowEm est)) $
+    put $ st { emailState = est' }
 
 incSelectedRow _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
 

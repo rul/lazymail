@@ -128,19 +128,20 @@ clearMain rows columns = do
     drawEmptyLine currentRow = do
       moveCursor currentRow 0
       drawString $ replicate (columns) ' '
-      if currentRow < rows - 1
-         then drawEmptyLine $ currentRow + 1
-         else return ()
+      when (currentRow < rows - 1) $ drawEmptyLine $ currentRow + 1
 
 {- Helper function of drawMode -}
 drawEmailHelper = do
   drawEmailHeader
 
   st <- get
+  let est = emailState st
   let body = getBody $ currentEmail . emailState $ st
   let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
-  let emailLines = formatBody body $ (screenColumns st) - 1
-  liftUpdate $ drawBody ((curRowAsInteger st) + 4) (colPadAsInteger st) maxRows emailLines
+  liftUpdate $
+    drawBody (curRowAsInteger st) (colPadAsInteger st) maxRows $
+      drop (scrollRowEm est) $ emailLines est
+  resetCurrentRow
 
 {- Draw the email headers -}
 drawEmailHeader = do
@@ -157,6 +158,7 @@ drawEmailHeader = do
     moveCursor (row + 2) (colPadAsInteger st)
     drawString $ ("Subject: " ++) $ cropWith "Subject: " . ppSubject . getSubject $ fs
     setColor $ baseColorID . colorStyle $ st
+  put $ st { currentRow = (4 + currentRow st) }
 
 {- Draw the email body -}
 drawBody _ _ _ [] = return ()

@@ -53,10 +53,9 @@ data ComposeState = ComposeState {
 }
 
 data EmailState = EmailState {
-    scrollBufferEm :: [String]
-  , scrollRowEm    :: Int
+    scrollRowEm    :: Int
   , emailLines     :: [String]
-  , currentEmail  :: Message
+  , currentEmail   :: Message
 }
 
 data ColorStyle = ColorStyle {
@@ -100,8 +99,7 @@ initialIndexState = IndexState {
 }
 
 initialEmailState = EmailState {
-    scrollBufferEm = []
-  , scrollRowEm    = 0
+    scrollRowEm    = 0
   , emailLines     = []
   , currentEmail   = Message [] "Dummy email"
 }
