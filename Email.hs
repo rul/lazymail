@@ -18,7 +18,7 @@ data Email = Email { emailPath :: String
                    }
 
 parseEmail :: String -> Message
-parseEmail msg = unwrapEmail $ parse message "<stdin>" $  fixEol $ uglyWorkaround msg
+parseEmail msg = unwrapEmail $ parse message "<stdin>" $  fixEol msg
 
 unwrapEmail (Right email) = email
 getFields (Message fs _) = fs
@@ -73,19 +73,3 @@ fixEol []               = []
 -- emailDescription = emailDescriptionWithPP defaultDescriptionPP
 
 -- emailDescriptionWithPP pp
-
-{- This is an ugly, Ugly, UGLY workaround for the encoding problems that I
- - have with Rfc2822 module. I've reported the bug. I hope it get fixed any time soon so
- - I can kill this function with fire -}
-
-uglyWorkaround :: String -> String
-uglyWorkaround = map replace where
-  replace c =
-    case c of
-      'á' -> 'a'
-      'é' -> 'e'
-      'í' -> 'i'
-      'ó' -> 'o'
-      'ú' -> 'u'
-      'ñ' -> 'n'
-      _   -> c

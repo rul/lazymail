@@ -129,6 +129,17 @@ decSelectedRow MaildirMode = do
       else
         put $ decrementSelectedRow st
 
+decSelectedRow EmailMode = do
+  st <- get
+  let est = emailState st
+  let cur = scrollRowEm est
+  let scrRows = screenRows st
+  let totalRows = length $ emailLines est
+  let est' = est { scrollRowEm = (cur - 1) }
+
+  when ((totalRows - (scrRows + cur)) > 0) $
+    put $ st { emailState = est' }
+
 decSelectedRow _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
 
 {- Given a list, it returns the elements that will be in the next screen refresh
@@ -158,3 +169,6 @@ formatMaildirModeRows st = mapM formatRow where
     pad     = "  "
     numPads = (length $ filter (== '/') str) + (length $ filter (`elem` imapSep) str)
     imapSep = ['.'] -- IMAP usually separates its directories with dots
+
+-- TODO: Improve this rancidness
+mailHeaderLength = 4
