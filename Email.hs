@@ -18,7 +18,7 @@ data Email = Email { emailPath :: String
                    }
 
 parseEmail :: String -> Message
-parseEmail msg = unwrapEmail $ parse message "<stdin>" $  fixEol msg
+parseEmail msg = unwrapEmail $ parse message "<stdin>" $  fixEol $ uglyWorkaround msg
 
 unwrapEmail (Right email) = email
 getFields (Message fs _) = fs
@@ -49,6 +49,15 @@ getResentMessageID fs = do { ResentMessageID f <- fs; f }
 getBody (Message _ []) = "Empty body"
 getBody (Message _ body) = body
 
+-- | Convert a String to multiple Strings, cropped by the maximum column
+--   size if necessary.
+formatBody :: String -> Int -> [String]
+formatBody body maxColumns = format [] [] body where
+  format parsed acc []                     = parsed ++ [acc]
+  format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
+  format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
+                                | otherwise               = format (parsed ++ [acc]) "+" rest
+
 -- Make sure all lines are terminated by CRLF.
 fixEol :: String -> String
 fixEol ('\r':'\n':xs)   = '\r' : '\n' : fixEol xs
@@ -65,4 +74,18 @@ fixEol []               = []
 
 -- emailDescriptionWithPP pp
 
+{- This is an ugly, Ugly, UGLY workaround for the encoding problems that I
+ - have with Rfc2822 module. I've reported the bug. I hope it get fixed any time soon so
+ - I can kill this function with fire -}
 
+uglyWorkaround :: String -> String
+uglyWorkaround = map replace where
+  replace c =
+    case c of
+      'á' -> 'a'
+      'é' -> 'e'
+      'í' -> 'i'
+      'ó' -> 'o'
+      'ú' -> 'u'
+      'ñ' -> 'n'
+      _   -> c

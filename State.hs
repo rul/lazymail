@@ -26,6 +26,7 @@ data LazymailState = LazymailState {
   , statusBar       :: Bool
   , maildirState    :: MaildirState
   , indexState      :: IndexState
+  , emailState      :: EmailState
   , composeState    :: ComposeState
   , colorStyle      :: ColorStyle
 }
@@ -36,7 +37,6 @@ data MaildirState = MaildirState {
   , detectedMDs     :: [(FilePath, String)]
   , scrollRowMD     :: Int
   , scrollBufferMD  :: [(FilePath, String)]
-    
 }
 
 data IndexState = IndexState {
@@ -53,11 +53,17 @@ data ComposeState = ComposeState {
     composition     :: Maybe String
 }
 
+data EmailState = EmailState {
+    scrollBufferEm :: [String]
+  , scrollRowEm    :: Int
+  , emailLines     :: [String]
+}
+
 data ColorStyle = ColorStyle {
     baseColorID      :: ColorID
   , selectionColorID :: ColorID
   , statusBarColorID :: ColorID
-  , headerColorID    :: ColorID    
+  , headerColorID    :: ColorID
 }
 
 initialState = LazymailState {
@@ -72,6 +78,7 @@ initialState = LazymailState {
   , maildirState  = initialMaildirState
   , indexState    = initialIndexState
   , composeState  = initialComposeState
+  , emailState    = initialEmailState
   , colorStyle    = initialColorStyle
 }
 
@@ -93,6 +100,12 @@ initialIndexState = IndexState {
   , scrollBufferIn     = []
 }
 
+initialEmailState = EmailState {
+    scrollBufferEm = []
+  , scrollRowEm    = 0
+  , emailLines     = []
+}
+
 initialComposeState = ComposeState {
     composition = Nothing
 }
@@ -101,7 +114,7 @@ initialColorStyle = ColorStyle {
     baseColorID      = defaultColorID
   , selectionColorID = defaultColorID
   , statusBarColorID = defaultColorID
-  , headerColorID    = defaultColorID                       
+  , headerColorID    = defaultColorID
 }
 
 scrColsAsInteger st = toInteger $ screenColumns st
@@ -132,7 +145,7 @@ incrementSelectedRow st | (selectedRow st) < limit =
     curMDLen = length $ detectedMDs . maildirState $ st
     limit' = case (mode st) of
       MaildirMode -> if curMDLen < scrRows then curMDLen - 1 else scrRows
-      IndexMode   -> if curInLen < scrRows then curInLen - 1 else scrRows     
+      IndexMode   -> if curInLen < scrRows then curInLen - 1 else scrRows
     limit = if (statusBar st) && (limit' == scrRows)
             then fromIntegral $ limit' - 2
             else fromIntegral limit'

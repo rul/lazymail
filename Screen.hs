@@ -58,7 +58,7 @@ startCurses = do
     return $ st { screenRows = fromIntegral $ rows - 1
                 , screenColumns = fromIntegral $ cols
                 , colorStyle = style }
-      
+
   resetScrollBuffer
   screenLoop
 
@@ -140,8 +140,8 @@ drawEmailHelper = do
   let body = getBody $ selectedEmail . indexState $ st
   let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
   let emailLines = formatBody body $ (screenColumns st) - 1
-  drawBody ((curRowAsInteger st) + 4) (colPadAsInteger st) maxRows emailLines
-          
+  liftUpdate $ drawBody ((curRowAsInteger st) + 4) (colPadAsInteger st) maxRows emailLines
+
 {- Draw the email headers -}
 drawEmailHeader = do
   st <- get
@@ -157,13 +157,13 @@ drawEmailHeader = do
     moveCursor (row + 2) (colPadAsInteger st)
     drawString $ ("Subject: " ++) $ cropWith "Subject: " . ppSubject . getSubject $ fs
     setColor $ baseColorID . colorStyle $ st
-  
-{- Draw the email body -}  
+
+{- Draw the email body -}
 drawBody _ _ _ [] = return ()
-drawBody row col maxRows (xs:xss) = liftUpdate $ do
+drawBody row col maxRows (xs:xss) = do
   moveCursor row col
   drawString xs
-  if row <  maxRows then drawBody (row + 1) col maxRows  xss else return ()
+  when (row <  maxRows) $ drawBody (row + 1) col maxRows  xss
 
 {- Draw a status line with the current mode and other stuff -}
 drawStatus  = do
@@ -227,11 +227,11 @@ resetScrollBuffer = do
     MaildirMode -> do
       let mst = (maildirState st) {
             scrollBufferMD = EH.scrollCrop 0 (screenRows st) $ detectedMDs . maildirState $ st }
-      put st { maildirState = mst}    
+      put st { maildirState = mst}
     IndexMode -> do
       let ist = (indexState st) {
             scrollBufferIn = EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
-      put st { indexState = ist }    
+      put st { indexState = ist }
 
 
 -- The type system complains if I want to use the same function for diferents monads
