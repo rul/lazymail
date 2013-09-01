@@ -136,6 +136,7 @@ drawEmailHelper = do
 
   st <- get
   let est = emailState st
+  put $ st { emailState = est { bodyStartRow = (currentRow st ) } }
   let body = getBody $ currentEmail . emailState $ st
   let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
   liftUpdate $

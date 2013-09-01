@@ -20,14 +20,15 @@ nameLen = 20
 ppNameAddr nas = intercalate ", " $ map ppNameAddr' nas
   where ppNameAddr' na = case nameAddr_name na of
                            Nothing -> nameAddr_addr na
-                           Just n  -> (decodeField n) ++ " <" ++ nameAddr_addr na ++ ">"
+                           Just n  -> unquote (decodeField n) ++ " <" ++ nameAddr_addr na ++ ">"
 
 ppIndexNameAddr nas = normalizeLen nameLen $ concat $ map ppNameAddr' nas
   where ppNameAddr' na = case nameAddr_name na of
                            Nothing -> nameAddr_addr na
-                           Just n  -> (decodeField n)
+                           Just n  -> unquote (decodeField n)
 
-subjectLen = 90
+unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
+
 ppSubject = flat . decodeField
 
 flat xs = intercalate " " $ map (dropWhile isSpace) $ map (filter (/= '\r')) $ lines xs

@@ -86,6 +86,7 @@ incSelectedRow MaildirMode = do
      else -- Move the selected row
        put $ incrementSelectedRow st
 
+{- Down-scrolling in Email mode -}
 incSelectedRow EmailMode = do
   st <- get
   let est = emailState st
@@ -94,7 +95,7 @@ incSelectedRow EmailMode = do
   let totalRows = length $ emailLines est
   let est' = est { scrollRowEm = (cur + 1) }
 
-  when ((totalRows - scrRows) > (scrollRowEm est)) $
+  when ((totalRows - scrRows + (bodyStartRow est) - 1) > (scrollRowEm est)) $
     put $ st { emailState = est' }
 
 incSelectedRow _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
@@ -138,7 +139,7 @@ decSelectedRow EmailMode = do
   let totalRows = length $ emailLines est
   let est' = est { scrollRowEm = (cur - 1) }
 
-  when ((totalRows - (scrRows + cur)) > 0) $
+  when (cur > 0) $
     put $ st { emailState = est' }
 
 decSelectedRow _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
@@ -170,6 +171,3 @@ formatMaildirModeRows st = mapM formatRow where
     pad     = "  "
     numPads = (length $ filter (== '/') str) + (length $ filter (`elem` imapSep) str)
     imapSep = ['.'] -- IMAP usually separates its directories with dots
-
--- TODO: Improve this rancidness
-mailHeaderLength = 4

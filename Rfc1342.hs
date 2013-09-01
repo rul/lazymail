@@ -44,7 +44,7 @@ decodeWithCharset dec ('?':c:'?':cs) | toLower c == 'b' = dataDecodeWith B64.dec
         rest = if "?=" `isPrefixOf` rest'
                then drop 2 rest'
                else rest'
-        dataDecodeWith datadec = (_2spc . dec . unwrap . datadec $ encoded) ++ (decodeField $ dropWhile isSpace rest)
+        dataDecodeWith datadec = (_2spc . dec . unwrap . datadec $ encoded) ++ decodeField rest -- ++ (decodeField $ dropWhile isSpace rest)
 
 unwrap :: Maybe [Word8] -> String
 unwrap Nothing    = []

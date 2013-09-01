@@ -54,6 +54,7 @@ data ComposeState = ComposeState {
 
 data EmailState = EmailState {
     scrollRowEm    :: Int
+  , bodyStartRow   :: Int
   , emailLines     :: [String]
   , currentEmail   :: Message
 }
@@ -100,6 +101,7 @@ initialIndexState = IndexState {
 
 initialEmailState = EmailState {
     scrollRowEm    = 0
+  , bodyStartRow  = 0
   , emailLines     = []
   , currentEmail   = Message [] "Dummy email"
 }
