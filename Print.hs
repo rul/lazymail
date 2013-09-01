@@ -16,20 +16,12 @@ import Text.ParserCombinators.Parsec.Rfc2822(NameAddr(..))
 import Email
 import Rfc1342
 
-nameLen = 20
-ppNameAddr nas = intercalate ", " $ map ppNameAddr' nas
-  where ppNameAddr' na = case nameAddr_name na of
-                           Nothing -> nameAddr_addr na
-                           Just n  -> unquote (decodeField n) ++ " <" ++ nameAddr_addr na ++ ">"
-
-ppIndexNameAddr nas = normalizeLen nameLen $ concat $ map ppNameAddr' nas
-  where ppNameAddr' na = case nameAddr_name na of
-                           Nothing -> nameAddr_addr na
-                           Just n  -> unquote (decodeField n)
-
 unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
 
-ppSubject = flat . decodeField
+ppField = flat . decodeField
+
+fromLen :: Int
+fromLen = 20
 
 flat xs = intercalate " " $ map (dropWhile isSpace) $ map (filter (/= '\r')) $ lines xs
 

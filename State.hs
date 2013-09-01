@@ -8,6 +8,7 @@
 
 module State where
 
+import Codec.MIME.Type(MIMEValue, nullMIMEValue)
 import Text.ParserCombinators.Parsec.Rfc2822(Message, GenericMessage(..))
 import UI.NCurses(ColorID(..), defaultColorID)
 import Network.Email.Mailbox(Flag(..), Flags)
@@ -56,7 +57,7 @@ data EmailState = EmailState {
     scrollRowEm    :: Int
   , bodyStartRow   :: Int
   , emailLines     :: [String]
-  , currentEmail   :: Message
+  , currentEmail   :: MIMEValue
 }
 
 data ColorStyle = ColorStyle {
@@ -103,7 +104,7 @@ initialEmailState = EmailState {
     scrollRowEm    = 0
   , bodyStartRow  = 0
   , emailLines     = []
-  , currentEmail   = Message [] "Dummy email"
+  , currentEmail   = nullMIMEValue
 }
 
 initialComposeState = ComposeState {

@@ -9,12 +9,12 @@
 
 module Screen where
 
+import Codec.MIME.Type(MIMEValue(..))
 import Control.Monad.Trans(liftIO)
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.List(isPrefixOf)
 import System.Exit
-import Text.ParserCombinators.Parsec.Rfc2822(Message(..))
 import UI.NCurses
 
 -- Local imports
@@ -22,7 +22,7 @@ import Config
 import qualified Handlers as EH
 import Lazymail
 import Maildir
-import Email
+import Email(lookupField, getBody, getHeaders)
 import Print
 import Rfc1342
 import State
@@ -148,16 +148,16 @@ drawEmailHelper = do
 drawEmailHeader = do
   st <- get
   liftUpdate $ do
-    let fs = getFields $ currentEmail . emailState $ st
+    let hs = getHeaders $ currentEmail . emailState $ st
     let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
     let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st
     moveCursor row (colPadAsInteger st)
-    drawCroppedString st $ ("From: " ++) $ ppNameAddr . getFrom $ fs
+    drawCroppedString st $ ("From: " ++) . ppField $ lookupField "from" hs
     moveCursor (row + 1) (colPadAsInteger st)
-    drawCroppedString st $ ("To: " ++) $ ppNameAddr . getTo $ fs
+    drawCroppedString st $ ("To: " ++) . ppField $ lookupField "to" hs
     moveCursor (row + 2) (colPadAsInteger st)
-    drawCroppedString st $ ("Subject: " ++) $ ppSubject . getSubject $ fs
+    drawCroppedString st $ ("Subject: " ++) . ppField $ lookupField "subject" hs
     setColor $ baseColorID . colorStyle $ st
   put $ st { currentRow = (4 + currentRow st) }
 

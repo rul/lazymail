@@ -7,16 +7,18 @@
 
 module Handlers where
 
-import Data.List(intercalate)
+import Codec.MIME.Parse(parseMIMEMessage)
+import Codec.MIME.Type(MIMEValue(..))
 import Control.Monad.State
-import Data.List(stripPrefix)
+import Data.List(intercalate, stripPrefix)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
+import qualified System.IO.UTF8 as UTF8
 
-import Email(parseEmail, getFields, getSubject, getFrom, getBody, formatBody)
+--import Email(parseEmail, getFields, getSubject, getFrom, getBody, formatBody)
+import Email(lookupField, getBody, formatBody)
 import Maildir
 import Print
 import State
-import qualified System.IO.UTF8 as UTF8
 import Types (LazymailCurses)
 
 previousMode :: Mode -> LazymailCurses ()
@@ -32,7 +34,7 @@ changeMode EmailMode   = return ()
 changeMode IndexMode   = do
   st <- get
   msg <- liftIO $ UTF8.readFile . selectedEmailPath . indexState $ st
-  let email = parseEmail msg
+  let email = parseMIMEMessage msg
   let body = getBody $ email
   let el = formatBody body $ screenColumns st
   let est = (emailState st) { currentEmail = email, emailLines = el, scrollRowEm = 0 }
@@ -151,12 +153,12 @@ scrollCrop top rows xs = take rows $ drop top xs
 formatIndexModeRows st = mapM formatRow where
   formatRow fp = do
     msg <- UTF8.readFile fp
-    let email = parseEmail msg
-    let fs = getFields email
+    let email = parseMIMEMessage msg
+    let hs = mime_val_headers email
     let str = normalizeLen (screenColumns st) $ intercalate ppSep $
               [ ppFlags . getFlags $ fp
-              , ppIndexNameAddr . getFrom $ fs
-              , ppSubject . getSubject $ fs
+              , normalizeLen fromLen $ ppField $ lookupField "from" hs
+              , ppField $ lookupField "subject" hs
               ]
     return (fp, str)
 

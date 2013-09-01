@@ -7,15 +7,74 @@
  -}
 module Email where
 
-import Network.Email.Mailbox(Flag(..), Flags)
+import Codec.MIME.Type(MIMEValue(..), MIMEContent(..))
+import Data.Char(toLower)
+import Data.List(find)
 
-import Text.Parsec.Error(ParseError)
+getBody :: MIMEValue -> String
+getBody msg =
+  case mime_val_content msg of
+    Single c -> c
+    _        -> "Buggity Buggity Buggity!"
+
+getHeaders :: MIMEValue -> [(String,String)]
+getHeaders = mime_val_headers
+
+-- | Convert a String to multiple Strings, cropped by the maximum column
+--   size if necessary.
+formatBody :: String -> Int -> [String]
+formatBody body maxColumns = format [] [] body where
+  format parsed acc []                     = parsed ++ [acc]
+  format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
+  format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
+                                | otherwise               = format (parsed ++ [acc]) "+" rest
+
+
+-- The following function is a verbatim copy of the unexported function in
+-- Codec.MIME.Parse.
+-- case in-sensitive lookup of field names or attributes\/parameters.
+lookupField' :: String -> [(String,a)] -> Maybe a
+lookupField' n ns =
+   -- assume that inputs have been mostly normalized already
+   -- (i.e., lower-cased), but should the lookup fail fall back
+   -- to a second try where we do normalize before giving up.
+  case lookup n ns of
+    x@Just{} -> x
+    Nothing  ->
+      let nl = map toLower n in
+      case find (\ (y,_) -> nl == map toLower y) ns of
+        Nothing -> Nothing
+	Just (_,x)  -> Just x
+
+unwrapField = maybe "" id
+
+lookupField n ns = unwrapField $ lookupField' n ns
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{-import Text.Parsec.Error(ParseError)
 import Text.ParserCombinators.Parsec (parse)
 import Text.ParserCombinators.Parsec.Rfc2822
-
-data Email = Email { emailPath :: String
-                   , parsedEmail :: Message
-                   }
 
 parseEmail :: String -> Message
 parseEmail msg = unwrapEmail $ parse message "<stdin>" $  fixEol msg
@@ -49,27 +108,9 @@ getResentMessageID fs = do { ResentMessageID f <- fs; f }
 getBody (Message _ []) = "Empty body"
 getBody (Message _ body) = body
 
--- | Convert a String to multiple Strings, cropped by the maximum column
---   size if necessary.
-formatBody :: String -> Int -> [String]
-formatBody body maxColumns = format [] [] body where
-  format parsed acc []                     = parsed ++ [acc]
-  format parsed acc ('\r':'\n':xs) = format (parsed ++ [acc]) [] xs
-  format parsed acc rest@(x:xs) | length acc < maxColumns = format parsed (acc ++ [x]) xs
-                                | otherwise               = format (parsed ++ [acc]) "+" rest
-
 -- Make sure all lines are terminated by CRLF.
 fixEol :: String -> String
 fixEol ('\r':'\n':xs)   = '\r' : '\n' : fixEol xs
 fixEol ('\n':xs)        = '\r' : '\n' : fixEol xs
 fixEol (x:xs)           = x : fixEol xs
-fixEol []               = []
-
---data DescriptionPP = DescriptionPP {
---   ppOrder :: [String] -> [String]
--- }
-
-
--- emailDescription = emailDescriptionWithPP defaultDescriptionPP
-
--- emailDescriptionWithPP pp
+fixEol []               = []-}
