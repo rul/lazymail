@@ -9,6 +9,7 @@ module Handlers where
 
 import Codec.MIME.Parse(parseMIMEMessage)
 import Codec.MIME.Type(MIMEValue(..))
+import Control.Exception(evaluate)
 import Control.Monad.State
 import Data.List(intercalate, stripPrefix)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
@@ -33,7 +34,7 @@ changeMode :: Mode -> LazymailCurses ()
 changeMode EmailMode   = return ()
 changeMode IndexMode   = do
   st <- get
-  msg <- liftIO $ UTF8.readFile . selectedEmailPath . indexState $ st
+  msg <- liftIO $ UTF8.readFile (selectedEmailPath . indexState $ st)
   let email = parseMIMEMessage msg
   let body = getBody $ email
   let el = formatBody body $ screenColumns st

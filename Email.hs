@@ -7,7 +7,7 @@
  -}
 module Email where
 
-import Codec.MIME.Type(MIMEValue(..), MIMEContent(..))
+import Codec.MIME.Type(MIMEValue(..), MIMEContent(..), showMIMEType, Type(..), MIMEType(..))
 import Data.Char(toLower)
 import Data.List(find)
 
@@ -15,7 +15,23 @@ getBody :: MIMEValue -> String
 getBody msg =
   case mime_val_content msg of
     Single c -> c
-    _        -> "Buggity Buggity Buggity!"
+    Multi mvs -> case firstTextPart mvs of
+      Just mv -> unwrapContent . mime_val_content $ mv
+      Nothing -> "Buggity Buggity Buggity!"
+  where
+    unwrapContent (Single c) = c
+
+-- hackish function for showing the email. In he future the logic of this
+-- function should be improved.
+firstTextPart []       = Nothing
+firstTextPart (mv:mvs) = case mime_val_content mv of
+  Single c   -> if isText mv then Just mv else firstTextPart mvs
+  Multi mvs' -> firstTextPart mvs'
+
+  where
+  isText = \mv -> case (mimeType $ mime_val_type mv) of
+    Text text -> True
+    _         -> False
 
 getHeaders :: MIMEValue -> [(String,String)]
 getHeaders = mime_val_headers
