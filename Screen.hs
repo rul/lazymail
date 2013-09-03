@@ -50,6 +50,7 @@ startCurses = do
   cfg <- ask
   (=<<) put $ liftCurses $ do
     setEcho False
+    setCursorMode CursorInvisible
     (rows, cols) <- screenSize
     basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
     selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
@@ -135,6 +136,7 @@ drawSimpleRow st path str | (mode st) == MaildirMode = drawString $ normalizeLen
 {- Empty the whole window. Useful when changing modes. -}
 clearMain rows columns = do
   drawEmptyLine 0
+  moveCursor 0 0
   where
     drawEmptyLine currentRow = do
       moveCursor currentRow 0
@@ -164,7 +166,7 @@ drawEmailHeaders = do
 
   liftUpdate $ do
     setColor $ headerColorID . colorStyle $ st
-    drawHeaders st (curRowAsInteger st) parsedHeaders 
+    drawHeaders st (curRowAsInteger st) parsedHeaders
     setColor $ baseColorID . colorStyle $ st
   put $ st { currentRow = 1 + (length parsedHeaders) + (currentRow st) }
 
@@ -195,9 +197,9 @@ drawBody row col maxRows (xs:xss) = do
 drawStatus  = do
   st <- get
   liftUpdate $ do
-    moveCursor ((scrRowsAsInteger st) - 1) 0
+    moveCursor (scrRowsAsInteger st) 0
     setColor $ statusBarColorID . colorStyle $ st
-    drawCroppedString st $ concat $ drawStatusHelper (mode st) st
+    drawString $ normalizeLen (screenColumns st - 1)$ concat $ drawStatusHelper (mode st) st -- Can't write in the last char - ncurses bug
     setColor $ baseColorID . colorStyle $ st
 
 {- Status bar string for Maildir mode -}

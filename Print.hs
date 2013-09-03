@@ -43,7 +43,7 @@ ppFlag FORWARDED = 'P'
 ppFlag DELETED   = 'T'
 ppFlag (OTHERFLAG [c]) = c
 
-ppSep = "\t"
+ppSep = "  "
 
 normalizeLen len cs = if (length cs > len)
                       then shorten len cs
