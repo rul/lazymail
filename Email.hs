@@ -17,7 +17,7 @@ getBody msg =
     Single c -> c
     Multi mvs -> case firstTextPart mvs of
       Just mv -> unwrapContent . mime_val_content $ mv
-      Nothing -> "Buggity Buggity Buggity!"
+      Nothing -> "This email has no displayable content."
   where
     unwrapContent (Single c) = c
 

@@ -31,6 +31,7 @@ data LazymailConfig = LazymailConfig {
   , initialPath        :: FilePath
   , filterMaildirsHook :: [FilePath] -> IO [FilePath]
   , indexDateFormat    :: String
+  , headersToShow      :: [String]  
 }
 
 data Email = Email {

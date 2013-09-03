@@ -13,6 +13,7 @@ import Codec.MIME.Type(MIMEValue(..))
 import Control.Monad.Trans(liftIO)
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.Char(toUpper)
 import Data.List(isPrefixOf)
 import System.Exit
 import UI.NCurses
@@ -22,7 +23,7 @@ import Config
 import qualified Handlers as EH
 import Lazymail
 import Maildir
-import Email(lookupField, getBody, getHeaders)
+import Email(lookupField, getBody, getHeaders, lookupField')
 import Print
 import Rfc1342
 import State
@@ -132,7 +133,7 @@ clearMain rows columns = do
 
 {- Helper function of drawMode -}
 drawEmailHelper = do
-  drawEmailHeader
+  drawEmailHeaders
 
   st <- get
   let est = emailState st
@@ -145,23 +146,33 @@ drawEmailHelper = do
   resetCurrentRow
 
 {- Draw the email headers -}
-drawEmailHeader = do
+drawEmailHeaders = do
   st <- get
+  cfg <- ask
+  let hs = getHeaders $ currentEmail . emailState $ st
+  let parsedHeaders = parseHeaders hs 0 $ headersToShow cfg
+
   liftUpdate $ do
-    let hs = getHeaders $ currentEmail . emailState $ st
-    let cropWith xs = normalizeLen $ (screenColumns st) - (length xs)
-    let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st
-    moveCursor row (colPadAsInteger st)
-    drawCroppedString st $ ("Date: " ++) . ppField $ lookupField "date" hs
-    moveCursor (row + 1) (colPadAsInteger st)
-    drawCroppedString st $ ("From: " ++) . ppField $ lookupField "from" hs
-    moveCursor (row + 2) (colPadAsInteger st)
-    drawCroppedString st $ ("To: " ++) . ppField $ lookupField "to" hs
-    moveCursor (row + 3) (colPadAsInteger st)
-    drawCroppedString st $ ("Subject: " ++) . ppField $ lookupField "subject" hs
+    drawHeaders st (curRowAsInteger st) parsedHeaders 
     setColor $ baseColorID . colorStyle $ st
-  put $ st { currentRow = (5 + currentRow st) }
+  put $ st { currentRow = 1 + (length parsedHeaders) + (currentRow st) }
+
+  where
+    parseHeaders _ _ [] = []
+    parseHeaders headers row (h:hs)= do
+      let field = lookupField' h headers
+      case field of
+        Nothing -> parseHeaders headers row hs
+        Just f -> let p = capitalize h ++ ": " ++ (ppField f)
+                  in p:parseHeaders headers (row + 1) hs
+          
+    capitalize str = (toUpper . head $ str):(tail str)
+    drawHeaders _ _ []      = return ()
+    drawHeaders st row (h:hs) = do
+      moveCursor row (colPadAsInteger st)
+      drawCroppedString st h
+      drawHeaders st (row + 1) hs
 
 {- Draw the email body -}
 drawBody _ _ _ [] = return ()

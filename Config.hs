@@ -22,7 +22,8 @@ defaultConfig = LazymailConfig {
   , showStatusBar      = True
   , initialPath        = ""
   , filterMaildirsHook =  \mds -> return mds
-  , indexDateFormat    = "%m %d"                                
+  , indexDateFormat    = "%m %d"
+  , headersToShow      = ["date", "from", "to", "cc", "bcc", "subject", "reply-to"]                       
 }
 
 --
