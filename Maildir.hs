@@ -11,8 +11,8 @@ module Maildir  where
 import Control.Monad.Loops(allM)
 import Control.Monad (forM, filterM)
 import Data.List(isPrefixOf)
-import System.Directory (doesDirectoryExist, getDirectoryContents)
-import System.FilePath ((</>))
+import System.Directory (doesDirectoryExist, getDirectoryContents, renameFile)
+import System.FilePath ((</>), takeFileName, takeDirectory, splitDirectories, joinPath)
 import System.IO(IOMode(..), hGetContents, openFile)
 
 import Types(Maildir, Flag(..), Flags)
@@ -40,10 +40,29 @@ getMessages :: Maildir -> [FilePath] -> IO [(FilePath, Flags, String)]
 getMessages mb list =  do
   messages <- getAll mb
   return $ filter (\(id, f, m) -> id `elem` list) messages
+  
+{- Given a mail in a Maildir, mark it as read -}
+markAsRead :: FilePath -> IO FilePath
+markAsRead fp =
+  case newPath of
+    Nothing -> return fp
+    Just path -> do
+      renameFile fp path
+      return path
+  where newPath = 
+          if not $ isNew fp
+          then Just fp
+          else do
+            let fil = takeFileName fp
+            let dir = takeDirectory fp
+            let spl = splitDirectories dir
+            case last spl of
+              "cur" -> Just $ fp ++ "S"
+              "new" -> Just $ (joinPath . init $ spl) </> ("cur" </> (fil ++ "S"))
+              _     -> Nothing
 
---
--- | Based on getRecursiveContents from Real World Haskell
---
+
+-- Based on getRecursiveContents from Real World Haskell
 getMaildirsRecursively :: FilePath -> IO [Maildir]
 getMaildirsRecursively topdir = do
   result <- search topdir

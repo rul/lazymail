@@ -20,7 +20,7 @@ getBody msg =
       Nothing -> "This email has no displayable content."
   where
     unwrapContent (Single c) = c
-
+    
 -- hackish function for showing the email. In he future the logic of this
 -- function should be improved.
 firstTextPart []       = Nothing

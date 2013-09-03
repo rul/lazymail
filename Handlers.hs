@@ -26,7 +26,13 @@ import Types
 
 previousMode :: Mode -> LazymailCurses ()
 previousMode MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested = True }
-previousMode EmailMode   = (=<<) put $ get >>= \st -> return st { mode = IndexMode }
+previousMode EmailMode   = do
+  st <- get
+  if (triggerUpdateIn . indexState $ st)
+  then do
+    changeMode MaildirMode
+    solveIndexUpdate
+  else put $ st { mode = IndexMode }
 previousMode IndexMode   = do
   st <- get
   let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }
@@ -36,7 +42,13 @@ changeMode :: Mode -> LazymailCurses ()
 changeMode EmailMode   = return ()
 changeMode IndexMode   = do
   st <- get
-  msg <- liftIO $ UTF8.readFile (selectedEmailPath . indexState $ st)
+  let fp = selectedEmailPath . indexState $ st
+  nfp <- if (isNew fp)
+         then liftIO $ markAsRead fp
+         else return fp
+  when (fp /= nfp) triggerIndexUpdate
+  st <- get
+  msg <- liftIO $ UTF8.readFile nfp
   let email = parseMIMEMessage msg
   let body = getBody $ email
   let el = formatBody body $ screenColumns st
@@ -193,3 +205,28 @@ formatMaildirModeRows st = mapM formatRow where
     pad     = "  "
     numPads = (length $ filter (== '/') str) + (length $ filter (`elem` imapSep) str)
     imapSep = ['.'] -- IMAP usually separates its directories with dots
+
+triggerIndexUpdate :: LazymailCurses ()
+triggerIndexUpdate = do
+  st <- get
+  let ist = indexState st
+  put $ st { indexState = (ist { triggerUpdateIn = True }) }
+  
+solveIndexUpdate :: LazymailCurses ()
+solveIndexUpdate = do
+  st <- get
+  let ist = indexState st
+  put $ st { indexState = (ist { triggerUpdateIn = False }) }  
+  
+triggerMaildirUpdate :: LazymailCurses ()
+triggerMaildirUpdate = do
+  st <- get
+  let mst = maildirState st
+  put $ st { maildirState = (mst { triggerUpdateMD = True }) }
+  
+solveMaildirUpdate :: LazymailCurses ()
+solveMaildirUpdate = do
+  st <- get
+  let mst = maildirState st
+  put $ st { maildirState = (mst { triggerUpdateMD = False }) }
+

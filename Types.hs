@@ -88,6 +88,7 @@ data MaildirState = MaildirState {
   , detectedMDs     :: [(FilePath, String)]
   , scrollRowMD     :: Int
   , scrollBufferMD  :: [(FilePath, String)]
+  , triggerUpdateMD :: Bool 
 }
 
 data IndexState = IndexState {
@@ -97,6 +98,7 @@ data IndexState = IndexState {
   , scrollRowIn       :: Int
   , currentInLen      :: Int
   , scrollBufferIn    :: [(FilePath, String)]
+  , triggerUpdateIn   :: Bool
 }
 
 data ComposeState = ComposeState {

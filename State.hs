@@ -33,11 +33,12 @@ initialState = LazymailState {
 }
 
 initialMaildirState = MaildirState {
-    selectedRowMD  = 0
-  , selectedMD     = ""
-  , detectedMDs    = []
-  , scrollRowMD    = 0
-  , scrollBufferMD = []
+    selectedRowMD   = 0
+  , selectedMD      = ""
+  , detectedMDs     = []
+  , scrollRowMD     = 0
+  , scrollBufferMD  = []
+  , triggerUpdateMD = False
 }
 
 initialIndexState = IndexState {
@@ -47,6 +48,7 @@ initialIndexState = IndexState {
   , scrollRowIn        = 0
   , currentInLen       = 0
   , scrollBufferIn     = []
+  , triggerUpdateIn    = False
 }
 
 initialEmailState = EmailState {
