@@ -13,6 +13,7 @@ import Control.Exception(evaluate)
 import Control.Monad.State
 import Data.List(intercalate, stripPrefix, sort)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
+import System.IO(openFile, IOMode(..), hClose)
 import System.Locale(rfc822DateFormat)
 import Data.DateTime(parseDateTime, startOfTime, formatDateTime)
 import qualified System.IO.UTF8 as UTF8
@@ -45,6 +46,7 @@ changeMode IndexMode   = do
 changeMode MaildirMode =  do
   st <- get
   unsortedEmails <- liftIO $ do
+    freeOldHandlers st
     let md = (selectedMD . maildirState) $ st
     emails <- getMaildirEmails md
     mapM toEmail emails
@@ -60,11 +62,14 @@ changeMode MaildirMode =  do
 
   where
     toEmail fp = do
-      msg <- readFile fp
+      handle <- openFile fp ReadMode
+      msg <- UTF8.hGetContents handle
       let value = parseMIMEMessage msg
       let headers = mime_val_headers value
       let date = maybe startOfTime id $ parseDateTime rfc822DateFormat $ takeWhile (/= '(') $ lookupField "date" headers
-      return (Email value date fp)
+      return (Email value date fp handle)
+
+freeOldHandlers st = mapM (hClose . emailHandle) $ selectedEmails . indexState $ st
 
 {- Boilerplate code -}
 incSelectedRow IndexMode = do

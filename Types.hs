@@ -12,6 +12,7 @@ import Control.Monad.Reader(ReaderT)
 import Control.Monad.State(StateT)
 import Data.DateTime(DateTime)
 import System.FilePath(FilePath)
+import System.IO(Handle)
 import UI.NCurses(Curses, Update, Color(..), ColorID)
 
 type LazymailUpdate = ReaderT LazymailConfig (StateT LazymailState Update)
@@ -36,16 +37,17 @@ data LazymailConfig = LazymailConfig {
 }
 
 data Email = Email {
-    emailValue :: MIMEValue
-  , emailDate  :: DateTime
-  , emailPath  :: FilePath
+    emailValue  :: MIMEValue
+  , emailDate   :: DateTime
+  , emailPath   :: FilePath
+  , emailHandle :: Handle
 }
 
 instance Eq Email where
-  (Email _ _ fp1) == (Email _ _ fp2) = fp1 == fp2
+  (Email _ _ fp1 _) == (Email _ _ fp2 _) = fp1 == fp2
 
 instance Ord Email where
-  (Email _ d1 _) `compare` (Email _ d2 _) = d1 `compare` d2
+  (Email _ d1 _ _) `compare` (Email _ d2 _ _) = d1 `compare` d2
 
 data Mode = MaildirMode | IndexMode | EmailMode | ComposeMode
                                                   deriving (Show, Eq)
