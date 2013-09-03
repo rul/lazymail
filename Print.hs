@@ -10,11 +10,10 @@ module Print where
 
 import Data.Char (isSpace)
 import Data.List (intercalate)
-import Network.Email.Mailbox(Flag(..), Flags)
-import Text.ParserCombinators.Parsec.Rfc2822(NameAddr(..))
 
 import Email
 import Rfc1342
+import Types(Flag(..), Flags)
 
 unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
 
@@ -26,12 +25,16 @@ ppField = flat . decodeField
 fromLen :: Int
 fromLen = 20
 
+maxFlags :: Int
+maxFlags = 4
+
 flat xs = intercalate " " $ map (dropWhile isSpace) $ map (filter (/= '\r')) $ lines xs
 
 ppFlags :: Flags -> String
 ppFlags = map ppFlag
 
 ppFlag :: Flag -> Char
+ppFlag NEW       = 'N'
 ppFlag SEEN      = 'S'
 ppFlag ANSWERED  = 'A'
 ppFlag FLAGGED   = 'F'

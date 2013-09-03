@@ -54,12 +54,12 @@ startCurses = do
     basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
     selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
     staColID <- newColorID (fst . statusBarColor $ cfg) (snd . statusBarColor $ cfg) 3
-    heaColID <- newColorID (fst . headerColor $ cfg) (snd . headerColor $ cfg) 3
-    let style = ColorStyle defaultColorID selColID staColID heaColID
+    heaColID <- newColorID (fst . headerColor $ cfg) (snd . headerColor $ cfg) 4
+    newColID <- newColorID (fst . newEmailColor $ cfg) (snd . newEmailColor $ cfg) 5
+    let style = ColorStyle basColID selColID staColID heaColID newColID
     return $ st { screenRows = fromIntegral $ rows - 1
                 , screenColumns = fromIntegral $ cols
                 , colorStyle = style }
-
   resetScrollBuffer
   screenLoop
 
@@ -110,7 +110,7 @@ drawSelectionList ((path, str):mds) = do
             let ist = (indexState st) { selectedEmailPath = path }
             return $ st { indexState = ist }
       else do
-        drawString $ normalizeLen (screenColumns st) str
+        drawSimpleRow st path str
         return st
 
   st <- get
@@ -121,6 +121,16 @@ drawSelectionList ((path, str):mds) = do
       drawSelectionList mds
     else
       resetCurrentRow
+
+drawSimpleRow st path str | (mode st) == MaildirMode = drawString $ normalizeLen (screenColumns st) str
+                          | (mode st) == IndexMode   =
+  if isNew path
+  then do
+    setColor $ newEmailColorID . colorStyle $ st
+    drawCroppedString st str
+    setColor $ baseColorID . colorStyle $ st
+  else
+    drawCroppedString st str
 
 {- Empty the whole window. Useful when changing modes. -}
 clearMain rows columns = do
@@ -166,7 +176,7 @@ drawEmailHeaders = do
         Nothing -> parseHeaders headers row hs
         Just f -> let p = capitalize h ++ ": " ++ (ppField f)
                   in p:parseHeaders headers (row + 1) hs
-          
+
     capitalize str = (toUpper . head $ str):(tail str)
     drawHeaders _ _ []      = return ()
     drawHeaders st row (h:hs) = do
@@ -187,7 +197,7 @@ drawStatus  = do
   liftUpdate $ do
     moveCursor ((scrRowsAsInteger st) - 1) 0
     setColor $ statusBarColorID . colorStyle $ st
-    drawString . normalizeLen (screenColumns st) . concat $ drawStatusHelper (mode st) st
+    drawCroppedString st $ concat $ drawStatusHelper (mode st) st
     setColor $ baseColorID . colorStyle $ st
 
 {- Status bar string for Maildir mode -}

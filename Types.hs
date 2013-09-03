@@ -27,11 +27,12 @@ data LazymailConfig = LazymailConfig {
   , selectionColor     :: (Color, Color)
   , statusBarColor     :: (Color, Color)
   , headerColor        :: (Color, Color)
+  , newEmailColor      :: (Color, Color)
   , showStatusBar      :: Bool
   , initialPath        :: FilePath
   , filterMaildirsHook :: [FilePath] -> IO [FilePath]
   , indexDateFormat    :: String
-  , headersToShow      :: [String]  
+  , headersToShow      :: [String]
 }
 
 data Email = Email {
@@ -47,6 +48,21 @@ instance Ord Email where
   (Email _ d1 _) `compare` (Email _ d2 _) = d1 `compare` d2
 
 data Mode = MaildirMode | IndexMode | EmailMode | ComposeMode
+                                                  deriving (Show, Eq)
+
+type Maildir = FilePath
+
+data Flag = NEW
+          | SEEN
+          | ANSWERED
+          | FLAGGED
+          | DELETED
+          | DRAFT
+          | FORWARDED
+          | OTHERFLAG String
+            deriving (Eq)
+
+type Flags = [Flag]
 
 data LazymailState = LazymailState {
     mode            :: Mode
@@ -97,4 +113,5 @@ data ColorStyle = ColorStyle {
   , selectionColorID :: ColorID
   , statusBarColorID :: ColorID
   , headerColorID    :: ColorID
+  , newEmailColorID  :: ColorID
 }

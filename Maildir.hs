@@ -14,9 +14,8 @@ import Data.List(isPrefixOf)
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.FilePath ((</>))
 import System.IO(IOMode(..), hGetContents, openFile)
-import Network.Email.Mailbox(Flag(..), Flags)
 
-type Maildir = FilePath
+import Types(Maildir, Flag(..), Flags)
 
 isMaildir :: FilePath -> IO Bool
 isMaildir fp = allM doesDirectoryExist [ fp
@@ -96,12 +95,16 @@ listMessageFlags fp = do
   return (zip ids flags)
 
 getFlags :: FilePath -> Flags
-getFlags fp = map toFlag $ strip fp
+getFlags fp = addNew $ map toFlag $ strip fp
   where strip x
           | null x               = []
           | ":2," `isPrefixOf` x = drop 3 x
           | otherwise            = let (discard, analyze) = span (/= ':') fp
                                    in strip analyze
+        addNew flags = if elem SEEN flags then flags else (NEW:flags)
+
+isNew :: FilePath -> Bool
+isNew fp = elem NEW $ getFlags fp
 
 toFlag :: Char -> Flag
 toFlag c | c == 'S'  = SEEN

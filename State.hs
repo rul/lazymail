@@ -65,6 +65,7 @@ initialColorStyle = ColorStyle {
   , selectionColorID = defaultColorID
   , statusBarColorID = defaultColorID
   , headerColorID    = defaultColorID
+  , newEmailColorID  = defaultColorID
 }
 
 scrColsAsInteger st = toInteger $ screenColumns st

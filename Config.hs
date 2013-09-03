@@ -16,14 +16,15 @@ import Types(LazymailConfig(..))
 
 defaultConfig = LazymailConfig {
     baseColor          = (ColorWhite, ColorBlack)
-  , selectionColor     = (ColorYellow, ColorBlack)
-  , statusBarColor     = (ColorYellow, ColorBlack)
-  , headerColor        = (ColorYellow, ColorBlack)
+  , selectionColor     = (ColorBlack, ColorWhite)
+  , statusBarColor     = (ColorBlack, ColorBlue)
+  , headerColor        = (ColorGreen, ColorBlack)
+  , newEmailColor      = (ColorBlue, ColorBlack)
   , showStatusBar      = True
   , initialPath        = ""
   , filterMaildirsHook =  \mds -> return mds
   , indexDateFormat    = "%m %d"
-  , headersToShow      = ["date", "from", "to", "cc", "bcc", "subject", "reply-to"]                       
+  , headersToShow      = ["date", "from", "to", "cc", "bcc", "subject", "reply-to"]
 }
 
 --

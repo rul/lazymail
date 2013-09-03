@@ -170,7 +170,7 @@ formatIndexModeRows st = map formatRow where
         email = emailValue e
         hs = mime_val_headers email
         str = normalizeLen (screenColumns st) $ intercalate ppSep $
-              [ ppFlags . getFlags $ fp
+              [ "[" ++ normalizeLen maxFlags (ppFlags . getFlags $ fp) ++ "]"
               , formatDateTime "%b %d" $ emailDate e
               , normalizeLen fromLen $ ppField $ lookupField "from" hs
               , ppField $ lookupField "subject" hs
