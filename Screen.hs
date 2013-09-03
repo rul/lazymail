@@ -26,7 +26,7 @@ import Email(lookupField, getBody, getHeaders)
 import Print
 import Rfc1342
 import State
-import Types(LazymailCurses, LazymailUpdate)
+import Types
 
 {- This function is the nexus between Curses and IO -}
 entryPoint :: Lazymail ()
@@ -153,13 +153,15 @@ drawEmailHeader = do
     let row = curRowAsInteger st
     setColor $ headerColorID . colorStyle $ st
     moveCursor row (colPadAsInteger st)
-    drawCroppedString st $ ("From: " ++) . ppField $ lookupField "from" hs
+    drawCroppedString st $ ("Date: " ++) . ppField $ lookupField "date" hs
     moveCursor (row + 1) (colPadAsInteger st)
-    drawCroppedString st $ ("To: " ++) . ppField $ lookupField "to" hs
+    drawCroppedString st $ ("From: " ++) . ppField $ lookupField "from" hs
     moveCursor (row + 2) (colPadAsInteger st)
+    drawCroppedString st $ ("To: " ++) . ppField $ lookupField "to" hs
+    moveCursor (row + 3) (colPadAsInteger st)
     drawCroppedString st $ ("Subject: " ++) . ppField $ lookupField "subject" hs
     setColor $ baseColorID . colorStyle $ st
-  put $ st { currentRow = (4 + currentRow st) }
+  put $ st { currentRow = (5 + currentRow st) }
 
 {- Draw the email body -}
 drawBody _ _ _ [] = return ()
@@ -233,7 +235,7 @@ resetScrollBuffer = do
       put st { maildirState = mst}
     IndexMode -> do
       let ist = (indexState st) {
-            scrollBufferIn = EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
+            scrollBufferIn = EH.formatIndexModeRows st $  EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
       put st { indexState = ist }
 
 drawCroppedString st str = drawString $ normalizeLen (screenColumns st) str

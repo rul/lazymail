@@ -20,6 +20,9 @@ unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
 
 ppField = flat . decodeField
 
+{- Pretty print a RFC822 date format -}
+
+
 fromLen :: Int
 fromLen = 20
 

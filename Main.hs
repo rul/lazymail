@@ -19,12 +19,10 @@ import Screen
 import State
 
 parse ["-h"] = usage   >> exit
+parse ["--help"] = usage   >> exit
 parse ["-v"] = version >> exit
-parse [md]   = do
-  putStrLn $ "Maildirs directory: " ++ md
-  run entryPoint
-
-parse [] = usage >> die
+parse ["--version"] = version >> exit
+parse _   = run entryPoint
 
 usage   = putStrLn . unlines $ usageText where
   usageText = ["Usage: ./Main [-vh] <maildirs>"

@@ -11,16 +11,17 @@ import Codec.MIME.Parse(parseMIMEMessage)
 import Codec.MIME.Type(MIMEValue(..))
 import Control.Exception(evaluate)
 import Control.Monad.State
-import Data.List(intercalate, stripPrefix)
+import Data.List(intercalate, stripPrefix, sort)
 import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
+import System.Locale(rfc822DateFormat)
+import Data.DateTime(parseDateTime, startOfTime, formatDateTime)
 import qualified System.IO.UTF8 as UTF8
 
---import Email(parseEmail, getFields, getSubject, getFrom, getBody, formatBody)
 import Email(lookupField, getBody, formatBody)
 import Maildir
 import Print
 import State
-import Types (LazymailCurses)
+import Types
 
 previousMode :: Mode -> LazymailCurses ()
 previousMode MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested = True }
@@ -43,16 +44,27 @@ changeMode IndexMode   = do
 
 changeMode MaildirMode =  do
   st <- get
-  selectedEmails' <- liftIO $ do
+  unsortedEmails <- liftIO $ do
     let md = (selectedMD . maildirState) $ st
     emails <- getMaildirEmails md
-    formatIndexModeRows st emails
+    mapM toEmail emails
+  let selectedEmails' = reverse $ sort unsortedEmails
+  let scrollRow = scrollRowIn . indexState $ st
+  let scrRows = screenRows st
   let indexState' = (indexState st) {
           selectedEmails = selectedEmails'
         , currentInLen   = length selectedEmails'
-        , scrollBufferIn = scrollCrop (scrollRowIn . indexState $ st) (screenRows st)  selectedEmails'
+        , scrollBufferIn = formatIndexModeRows st $ scrollCrop scrollRow scrRows selectedEmails'
         }
   put $ st { mode = IndexMode, indexState = indexState' }
+
+  where
+    toEmail fp = do
+      msg <- readFile fp
+      let value = parseMIMEMessage msg
+      let headers = mime_val_headers value
+      let date = maybe startOfTime id $ parseDateTime rfc822DateFormat $ takeWhile (/= '(') $ lookupField "date" headers
+      return (Email value date fp)
 
 {- Boilerplate code -}
 incSelectedRow IndexMode = do
@@ -66,7 +78,7 @@ incSelectedRow IndexMode = do
   if selRow > startScrolling && (topScrollRow <= (totalRows - (screenRows st)))
      then do -- Scroll emails
        let scrollRowIn'    = scrollRowIn inSt + 1
-       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
+       let scrollBufferIn' = formatIndexModeRows st $ scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
        let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
        put st { indexState = inSt' }
      else -- Move the selected row
@@ -113,7 +125,7 @@ decSelectedRow IndexMode = do
   if topScrollRow > 0 && selRow < startScrolling
      then do
        let scrollRowIn'    = scrollRowIn inSt - 1
-       let scrollBufferIn' = scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
+       let scrollBufferIn' = formatIndexModeRows st $ scrollCrop scrollRowIn' (screenRows st) $ selectedEmails inSt
        let inSt'           = inSt { scrollRowIn = scrollRowIn', scrollBufferIn = scrollBufferIn' }
        put st { indexState = inSt' }
       else
@@ -151,17 +163,19 @@ decSelectedRow _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
  - TODO: find a better name -}
 scrollCrop top rows xs = take rows $ drop top xs
 
-formatIndexModeRows st = mapM formatRow where
-  formatRow fp = do
-    msg <- UTF8.readFile fp
-    let email = parseMIMEMessage msg
-    let hs = mime_val_headers email
-    let str = normalizeLen (screenColumns st) $ intercalate ppSep $
+formatIndexModeRows :: LazymailState -> [Email] -> [(FilePath, String)]
+formatIndexModeRows st = map formatRow where
+  formatRow e = 
+    let fp = emailPath e
+        email = emailValue e
+        hs = mime_val_headers email
+        str = normalizeLen (screenColumns st) $ intercalate ppSep $
               [ ppFlags . getFlags $ fp
+              , formatDateTime "%b %d" $ emailDate e
               , normalizeLen fromLen $ ppField $ lookupField "from" hs
               , ppField $ lookupField "subject" hs
               ]
-    return (fp, str)
+    in (fp, str)
 
 formatMaildirModeRows st = mapM formatRow where
   formatRow fp = return $ (fp, (concat $ replicate (numPads - 1) pad) ++ name) where

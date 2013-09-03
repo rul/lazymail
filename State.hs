@@ -14,58 +14,7 @@ import UI.NCurses(ColorID(..), defaultColorID)
 import Network.Email.Mailbox(Flag(..), Flags)
 import System.FilePath
 
-data Mode = MaildirMode | IndexMode | EmailMode | ComposeMode
-
-data LazymailState = LazymailState {
-    mode            :: Mode
-  , basePath        :: FilePath
-  , screenRows      :: Int
-  , screenColumns   :: Int
-  , currentRow      :: Int
-  , columnPadding   :: Int
-  , exitRequested   :: Bool
-  , statusBar       :: Bool
-  , maildirState    :: MaildirState
-  , indexState      :: IndexState
-  , emailState      :: EmailState
-  , composeState    :: ComposeState
-  , colorStyle      :: ColorStyle
-}
-
-data MaildirState = MaildirState {
-    selectedRowMD   :: Int
-  , selectedMD      :: String
-  , detectedMDs     :: [(FilePath, String)]
-  , scrollRowMD     :: Int
-  , scrollBufferMD  :: [(FilePath, String)]
-}
-
-data IndexState = IndexState {
-    selectedRowIn     :: Int
-  , selectedEmailPath :: FilePath
-  , selectedEmails    :: [(FilePath, String)]
-  , scrollRowIn       :: Int
-  , currentInLen      :: Int
-  , scrollBufferIn    :: [(FilePath, String)]
-}
-
-data ComposeState = ComposeState {
-    composition     :: Maybe String
-}
-
-data EmailState = EmailState {
-    scrollRowEm    :: Int
-  , bodyStartRow   :: Int
-  , emailLines     :: [String]
-  , currentEmail   :: MIMEValue
-}
-
-data ColorStyle = ColorStyle {
-    baseColorID      :: ColorID
-  , selectionColorID :: ColorID
-  , statusBarColorID :: ColorID
-  , headerColorID    :: ColorID
-}
+import Types
 
 initialState = LazymailState {
     mode          = MaildirMode

@@ -13,11 +13,7 @@ import Control.Monad.State
 
 import Config
 import State
-
-{- Lazymail monad is a ReaderT around a StateT with IO at the bottom of the
- - stack.
- -}
-type Lazymail = ReaderT LazymailConfig (StateT LazymailState IO)
+import Types
 
 run :: Lazymail a -> IO (a, LazymailState)
 run k =
