@@ -6,14 +6,14 @@
  -
  -}
 
-module Print where
+module Lazymail.Print where
 
 import Data.Char (isSpace)
 import Data.List (intercalate)
 
-import Email
-import Rfc1342
-import Types(Flag(..), Flags)
+import Lazymail.Email
+import Codec.Text.Rfc1342
+import Lazymail.Types(Flag(..), Flags)
 
 unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
 

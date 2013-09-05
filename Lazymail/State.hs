@@ -6,7 +6,7 @@
  -
  -}
 
-module State where
+module Lazymail.State where
 
 import Codec.MIME.Type(MIMEValue, nullMIMEValue)
 import Text.ParserCombinators.Parsec.Rfc2822(Message, GenericMessage(..))
@@ -14,7 +14,7 @@ import UI.NCurses(ColorID(..), defaultColorID)
 import Network.Email.Mailbox(Flag(..), Flags)
 import System.FilePath
 
-import Types
+import Lazymail.Types
 
 initialState = LazymailState {
     mode          = MaildirMode

@@ -6,7 +6,7 @@
  -
  -}
 
-module Maildir  where
+module Lazymail.Maildir  where
 
 import Control.Monad.Loops(allM)
 import Control.Monad (forM, filterM)
@@ -15,7 +15,7 @@ import System.Directory (doesDirectoryExist, getDirectoryContents, renameFile)
 import System.FilePath ((</>), takeFileName, takeDirectory, splitDirectories, joinPath)
 import System.IO(IOMode(..), hGetContents, openFile)
 
-import Types(Maildir, Flag(..), Flags)
+import Lazymail.Types(Maildir, Flag(..), Flags)
 
 isMaildir :: FilePath -> IO Bool
 isMaildir fp = allM doesDirectoryExist [ fp

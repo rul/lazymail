@@ -5,7 +5,7 @@
  - Licensed under the GNU GPL version 3 or higher
  -}
 
-module Handlers where
+module Lazymail.Handlers where
 
 import Codec.MIME.Parse(parseMIMEMessage)
 import Codec.MIME.Type(MIMEValue(..))
@@ -18,11 +18,11 @@ import System.Locale(rfc822DateFormat)
 import Data.DateTime(parseDateTime, startOfTime, formatDateTime)
 import qualified System.IO.UTF8 as UTF8
 
-import Email(lookupField, getBody, formatBody)
-import Maildir
-import Print
-import State
-import Types
+import Lazymail.Email(lookupField, getBody, formatBody)
+import Lazymail.Maildir
+import Lazymail.Print
+import Lazymail.State
+import Lazymail.Types
 
 previousMode :: Mode -> LazymailCurses ()
 previousMode MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested = True }

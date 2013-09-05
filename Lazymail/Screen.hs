@@ -7,7 +7,7 @@
  - This code is in an urgent need of a big refactoring.
  -}
 
-module Screen where
+module Lazymail.Screen where
 
 import Codec.MIME.Type(MIMEValue(..))
 import Control.Monad.Trans(liftIO)
@@ -19,15 +19,14 @@ import System.Exit
 import UI.NCurses
 
 -- Local imports
-import Config
-import qualified Handlers as EH
-import Lazymail
-import Maildir
-import Email(lookupField, getBody, getHeaders, lookupField')
-import Print
-import Rfc1342
-import State
-import Types
+import Lazymail.Config
+import qualified Lazymail.Handlers as EH
+import Lazymail.Maildir
+import Lazymail.Email(lookupField, getBody, getHeaders, lookupField')
+import Lazymail.Print
+import Codec.Text.Rfc1342
+import Lazymail.State
+import Lazymail.Types
 
 {- This function is the nexus between Curses and IO -}
 entryPoint :: Lazymail ()
@@ -51,6 +50,7 @@ startCurses = do
   (=<<) put $ liftCurses $ do
     setEcho False
     setCursorMode CursorInvisible
+    w <- defaultWindow
     (rows, cols) <- screenSize
     basColID <- newColorID (fst . baseColor $ cfg) (snd . baseColor $ cfg) 1
     selColID <- newColorID (fst . selectionColor $ cfg) (snd . selectionColor $ cfg) 2
@@ -237,7 +237,7 @@ handleEvent = loop where
           EventSpecialKey KeyDownArrow  -> EH.incSelectedRow (mode st)
           EventCharacter 'j'            -> EH.incSelectedRow (mode st)
 
-          EventSpecialKey KeyEnter      -> EH.changeMode (mode st)
+          EventCharacter '\n'           -> EH.changeMode (mode st)
           EventSpecialKey KeyRightArrow -> EH.changeMode (mode st)
 
           _ ->  loop

@@ -5,7 +5,7 @@
  - Licensed under the GNU GPL version 3 or higher
  -
  -}
-module Email where
+module Lazymail.Email where
 
 import Codec.MIME.Type(MIMEValue(..), MIMEContent(..), showMIMEType, Type(..), MIMEType(..))
 import Data.Char(toLower)
@@ -20,7 +20,7 @@ getBody msg =
       Nothing -> "This email has no displayable content."
   where
     unwrapContent (Single c) = c
-    
+
 -- hackish function for showing the email. In he future the logic of this
 -- function should be improved.
 firstTextPart []       = Nothing

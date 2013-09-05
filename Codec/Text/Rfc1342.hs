@@ -5,7 +5,7 @@
  - Licensed under the GNU GPL version 3 or higher
  -
  -}
-module Rfc1342 (decodeField) where
+module Codec.Text.Rfc1342 (decodeField) where
 
 import qualified Codec.Binary.Base64 as B64
 import qualified Codec.Binary.QuotedPrintable as QP

@@ -6,13 +6,14 @@
  -
  -}
 
-module Config(LazymailConfig(..), defaultConfig, customConfig) where
+module Lazymail.Config(LazymailConfig(..), defaultConfig, customConfig) where
 
 import Data.List(sort, stripPrefix)
 import System.Posix.Files(getSymbolicLinkStatus, isSymbolicLink)
 import UI.NCurses(Color(..))
 
-import Types(LazymailConfig(..))
+import Lazymail.Keymap
+import Lazymail.Types(LazymailConfig(..))
 
 defaultConfig = LazymailConfig {
     baseColor          = (ColorWhite, ColorBlack)
@@ -25,6 +26,11 @@ defaultConfig = LazymailConfig {
   , filterMaildirsHook =  \mds -> return mds
   , indexDateFormat    = "%m %d"
   , headersToShow      = ["date", "from", "to", "cc", "bcc", "subject", "reply-to"]
+  , globalKeymaps      = defaultGlobalKeymap
+  , maildirModeKeymap  = defaultMaildirKeymap
+  , indexModeKeymap    = defaultIndexKeymap
+  , emailModeKeymap    = defaultEmailKeymap
+  , composeModeKeymap  = defaultComposeKeymap
 }
 
 --

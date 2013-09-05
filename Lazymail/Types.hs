@@ -5,7 +5,7 @@
  - Licensed under the GNU GPL version 3 or higher
  -}
 
-module Types where
+module Lazymail.Types where
 
 import Codec.MIME.Type(MIMEValue(..))
 import Control.Monad.Reader(ReaderT)
@@ -13,7 +13,7 @@ import Control.Monad.State(StateT)
 import Data.DateTime(DateTime)
 import System.FilePath(FilePath)
 import System.IO(Handle)
-import UI.NCurses(Curses, Update, Color(..), ColorID)
+import UI.NCurses(Curses, Update, Color(..), ColorID, Event(..))
 
 type LazymailUpdate = ReaderT LazymailConfig (StateT LazymailState Update)
 type LazymailCurses = ReaderT LazymailConfig (StateT LazymailState Curses)
@@ -34,6 +34,11 @@ data LazymailConfig = LazymailConfig {
   , filterMaildirsHook :: [FilePath] -> IO [FilePath]
   , indexDateFormat    :: String
   , headersToShow      :: [String]
+  , globalKeymaps      :: [Keymap]
+  , maildirModeKeymap  :: [Keymap]
+  , indexModeKeymap    :: [Keymap]
+  , emailModeKeymap    :: [Keymap]
+  , composeModeKeymap  :: [Keymap]
 }
 
 data Email = Email {
@@ -119,3 +124,5 @@ data ColorStyle = ColorStyle {
   , headerColorID    :: ColorID
   , newEmailColorID  :: ColorID
 }
+
+type Keymap = ([Event], LazymailCurses ())

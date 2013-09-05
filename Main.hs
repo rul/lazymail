@@ -8,21 +8,30 @@
 
 module Main (main) where
 
+import Control.Monad.Reader(runReaderT)
+import Control.Monad.State(runStateT)
 import System.Environment
 import System.Exit
 import System.FilePath(takeDirectory)
 
-import Lazymail
-import Email
-import Maildir
-import Screen
-import State
+import Lazymail.Config(customConfig)
+import Lazymail.Email
+import Lazymail.Maildir
+import Lazymail.Screen
+import Lazymail.State
+import Lazymail.Types
 
 parse ["-h"] = usage   >> exit
 parse ["--help"] = usage   >> exit
 parse ["-v"] = version >> exit
 parse ["--version"] = version >> exit
 parse _   = run entryPoint
+
+run :: Lazymail a -> IO (a, LazymailState)
+run k =
+  let config = customConfig
+      state  = initialState { basePath = initialPath config }
+  in runStateT (runReaderT k config) state
 
 usage   = putStrLn . unlines $ usageText where
   usageText = ["Usage: ./Main [-vh] <maildirs>"
