@@ -75,51 +75,6 @@ scrRowsAsInteger st = toInteger $ screenRows st
 curRowAsInteger  st = toInteger $ currentRow st
 colPadAsInteger  st = toInteger $ columnPadding st
 
-
-incrementSelectedRow st | (selectedRow st) < limit =
-  case (mode st) of
-    MaildirMode ->
-      let
-        sr = (selectedRowMD . maildirState) st
-        maildirState' = (maildirState st) { selectedRowMD = sr + 1 }
-      in
-       st { maildirState = maildirState' }
-    IndexMode ->
-      let
-        sr = (selectedRowIn . indexState) st
-        indexState' = (indexState st) { selectedRowIn = sr + 1 }
-      in
-       st { indexState = indexState' }
-    _ -> st
-                        | otherwise = st
-  where
-    scrRows = screenRows st
-    curInLen = length $ selectedEmails . indexState $ st
-    curMDLen = length $ detectedMDs . maildirState $ st
-    limit' = case (mode st) of
-      MaildirMode -> if curMDLen < scrRows then curMDLen - 1 else scrRows
-      IndexMode   -> if curInLen < scrRows then curInLen - 1 else scrRows
-    limit = if (statusBar st) && (limit' == scrRows)
-            then fromIntegral $ limit' - 2
-            else fromIntegral limit'
-
-decrementSelectedRow st | (selectedRow st) > 0 =
-  case (mode st) of
-    MaildirMode ->
-      let
-        sr = (selectedRowMD . maildirState) st
-        maildirState' = (maildirState st) { selectedRowMD = sr - 1 }
-      in
-       st { maildirState = maildirState' }
-    IndexMode ->
-      let
-        sr = (selectedRowIn . indexState) st
-        indexState' = (indexState st) { selectedRowIn = sr - 1 }
-      in
-       st { indexState = indexState' }
-    _ -> st
-                        | otherwise = st
-
 selectedRow st = case (mode st) of
       MaildirMode -> selectedRowMD . maildirState $ st
       IndexMode   -> selectedRowIn . indexState   $ st

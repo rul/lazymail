@@ -84,7 +84,7 @@ changeMode MaildirMode =  do
 freeOldHandlers st = mapM (hClose . emailHandle) $ selectedEmails . indexState $ st
 
 {- Boilerplate code -}
-incSelectedRow IndexMode = do
+scrollDown IndexMode = do
   st <- get
   let inSt = indexState st
   let selRow = selectedRowIn inSt
@@ -101,7 +101,7 @@ incSelectedRow IndexMode = do
      else -- Move the selected row
        put $ incrementSelectedRow st
 
-incSelectedRow MaildirMode = do
+scrollDown MaildirMode = do
   st <- get
   let mdSt = maildirState st
   let selRow = selectedRowMD mdSt
@@ -119,7 +119,7 @@ incSelectedRow MaildirMode = do
        put $ incrementSelectedRow st
 
 {- Down-scrolling in Email mode -}
-incSelectedRow EmailMode = do
+scrollDown EmailMode = do
   st <- get
   let est = emailState st
   let cur = scrollRowEm est
@@ -130,10 +130,10 @@ incSelectedRow EmailMode = do
   when ((totalRows - scrRows + (bodyStartRow est) - 1) > (scrollRowEm est)) $
     put $ st { emailState = est' }
 
-incSelectedRow _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
+scrollDown _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
 
 {- More boilerplate code -}
-decSelectedRow IndexMode = do
+scrollUp IndexMode = do
   st <- get
   let inSt = indexState st
   let selRow = selectedRowIn inSt
@@ -148,7 +148,7 @@ decSelectedRow IndexMode = do
       else
         put $ decrementSelectedRow st
 
-decSelectedRow MaildirMode = do
+scrollUp MaildirMode = do
   st <- get
   let mdSt = maildirState st
   let selRow = selectedRowMD mdSt
@@ -163,7 +163,7 @@ decSelectedRow MaildirMode = do
       else
         put $ decrementSelectedRow st
 
-decSelectedRow EmailMode = do
+scrollUp EmailMode = do
   st <- get
   let est = emailState st
   let cur = scrollRowEm est
@@ -174,7 +174,52 @@ decSelectedRow EmailMode = do
   when (cur > 0) $
     put $ st { emailState = est' }
 
-decSelectedRow _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+scrollUp _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+
+incrementSelectedRow st | (selectedRow st) < limit =
+  case (mode st) of
+    MaildirMode ->
+      let
+        sr = (selectedRowMD . maildirState) st
+        maildirState' = (maildirState st) { selectedRowMD = sr + 1 }
+      in
+       st { maildirState = maildirState' }
+    IndexMode ->
+      let
+        sr = (selectedRowIn . indexState) st
+        indexState' = (indexState st) { selectedRowIn = sr + 1 }
+      in
+       st { indexState = indexState' }
+    _ -> st
+                        | otherwise = st
+  where
+    scrRows = screenRows st
+    curInLen = length $ selectedEmails . indexState $ st
+    curMDLen = length $ detectedMDs . maildirState $ st
+    limit' = case (mode st) of
+      MaildirMode -> if curMDLen < scrRows then curMDLen - 1 else scrRows
+      IndexMode   -> if curInLen < scrRows then curInLen - 1 else scrRows
+    limit = if (statusBar st) && (limit' == scrRows)
+            then fromIntegral $ limit' - 2
+            else fromIntegral limit'
+
+decrementSelectedRow st | (selectedRow st) > 0 =
+  case (mode st) of
+    MaildirMode ->
+      let
+        sr = (selectedRowMD . maildirState) st
+        maildirState' = (maildirState st) { selectedRowMD = sr - 1 }
+      in
+       st { maildirState = maildirState' }
+    IndexMode ->
+      let
+        sr = (selectedRowIn . indexState) st
+        indexState' = (indexState st) { selectedRowIn = sr - 1 }
+      in
+       st { indexState = indexState' }
+    _ -> st
+                        | otherwise = st
+
 
 {- Given a list, it returns the elements that will be in the next screen refresh
  - TODO: find a better name -}
@@ -211,19 +256,19 @@ triggerIndexUpdate = do
   st <- get
   let ist = indexState st
   put $ st { indexState = (ist { triggerUpdateIn = True }) }
-  
+
 solveIndexUpdate :: LazymailCurses ()
 solveIndexUpdate = do
   st <- get
   let ist = indexState st
-  put $ st { indexState = (ist { triggerUpdateIn = False }) }  
-  
+  put $ st { indexState = (ist { triggerUpdateIn = False }) }
+
 triggerMaildirUpdate :: LazymailCurses ()
 triggerMaildirUpdate = do
   st <- get
   let mst = maildirState st
   put $ st { maildirState = (mst { triggerUpdateMD = True }) }
-  
+
 solveMaildirUpdate :: LazymailCurses ()
 solveMaildirUpdate = do
   st <- get

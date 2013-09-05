@@ -231,11 +231,11 @@ handleEvent = loop where
         case ev' of
           EventCharacter 'q'            -> EH.previousMode (mode st)
 
-          EventSpecialKey KeyUpArrow    -> EH.decSelectedRow (mode st)
-          EventCharacter 'k'            -> EH.decSelectedRow (mode st)
+          EventSpecialKey KeyUpArrow    -> EH.scrollUp (mode st)
+          EventCharacter 'k'            -> EH.scrollUp (mode st)
 
-          EventSpecialKey KeyDownArrow  -> EH.incSelectedRow (mode st)
-          EventCharacter 'j'            -> EH.incSelectedRow (mode st)
+          EventSpecialKey KeyDownArrow  -> EH.scrollDown (mode st)
+          EventCharacter 'j'            -> EH.scrollDown (mode st)
 
           EventCharacter '\n'           -> EH.changeMode (mode st)
           EventSpecialKey KeyRightArrow -> EH.changeMode (mode st)
