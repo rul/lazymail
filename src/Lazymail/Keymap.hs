@@ -32,8 +32,8 @@ defaultComposeKeymap = []
 -- | Try to find a keymap for the current mode. If nothing is found, then
 --   try looking up in the global keymap.
 findHandler st cfg ev = case modeHandler (mode st) ev of
-  Nothing -> globalHandler ev
-  Just h  -> Just h -- I think I saw a way of using an as-pattern in this case
+  Nothing  -> globalHandler ev
+  h@Just{} -> h
   where
     modeHandler MaildirMode = lookupHandler $ maildirModeKeymap cfg
     modeHandler IndexMode   = lookupHandler $ indexModeKeymap  cfg
