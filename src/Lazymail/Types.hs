@@ -34,7 +34,7 @@ data LazymailConfig = LazymailConfig {
   , filterMaildirsHook :: [FilePath] -> IO [FilePath]
   , indexDateFormat    :: String
   , headersToShow      :: [String]
-  , globalKeymaps      :: [Keymap]
+  , globalKeymap       :: [Keymap]
   , maildirModeKeymap  :: [Keymap]
   , indexModeKeymap    :: [Keymap]
   , emailModeKeymap    :: [Keymap]

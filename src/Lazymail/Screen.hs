@@ -229,16 +229,16 @@ handleEvent = loop where
       Nothing  -> loop
       Just ev' ->
         case ev' of
-          EventCharacter 'q'            -> EH.previousMode (mode st)
+          EventCharacter 'q'            -> EH.previousMode
 
-          EventSpecialKey KeyUpArrow    -> EH.scrollUp (mode st)
-          EventCharacter 'k'            -> EH.scrollUp (mode st)
+          EventSpecialKey KeyUpArrow    -> EH.scrollUp
+          EventCharacter 'k'            -> EH.scrollUp
 
-          EventSpecialKey KeyDownArrow  -> EH.scrollDown (mode st)
-          EventCharacter 'j'            -> EH.scrollDown (mode st)
+          EventSpecialKey KeyDownArrow  -> EH.scrollDown
+          EventCharacter 'j'            -> EH.scrollDown
 
-          EventCharacter '\n'           -> EH.changeMode (mode st)
-          EventSpecialKey KeyRightArrow -> EH.changeMode (mode st)
+          EventCharacter '\n'           -> EH.advanceMode
+          EventSpecialKey KeyRightArrow -> EH.advanceMode
 
           _ ->  loop
 

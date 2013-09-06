@@ -24,23 +24,26 @@ import Lazymail.Print
 import Lazymail.State
 import Lazymail.Types
 
-previousMode :: Mode -> LazymailCurses ()
-previousMode MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested = True }
-previousMode EmailMode   = do
+previousMode :: LazymailCurses ()
+previousMode = get >>= \st -> previousMode' (mode st)
+
+previousMode' MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested = True }
+previousMode' EmailMode   = do
   st <- get
   if (triggerUpdateIn . indexState $ st)
   then do
-    changeMode MaildirMode
+    advanceMode
     solveIndexUpdate
   else put $ st { mode = IndexMode }
-previousMode IndexMode   = do
+previousMode' IndexMode   = do
   st <- get
   let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }
   put $ st { mode = MaildirMode, indexState = ist }
 
-changeMode :: Mode -> LazymailCurses ()
-changeMode EmailMode   = return ()
-changeMode IndexMode   = do
+advanceMode :: LazymailCurses ()
+advanceMode = get >>= \st -> advanceMode' (mode st)
+
+advanceMode' IndexMode   = do
   st <- get
   let fp = selectedEmailPath . indexState $ st
   nfp <- if (isNew fp)
@@ -55,7 +58,7 @@ changeMode IndexMode   = do
   let est = (emailState st) { currentEmail = email, emailLines = el, scrollRowEm = 0 }
   put $ st { mode = EmailMode, emailState = est }
 
-changeMode MaildirMode =  do
+advanceMode' MaildirMode =  do
   st <- get
   unsortedEmails <- liftIO $ do
     freeOldHandlers st
@@ -81,10 +84,15 @@ changeMode MaildirMode =  do
       let date = maybe startOfTime id $ parseDateTime rfc822DateFormat $ takeWhile (/= '(') $ lookupField "date" headers
       return (Email value date fp handle)
 
+advanceMode' _  = return ()
+
 freeOldHandlers st = mapM (hClose . emailHandle) $ selectedEmails . indexState $ st
 
-{- Boilerplate code -}
-scrollDown IndexMode = do
+scrollDown :: LazymailCurses ()
+scrollDown = get >>= \st -> scrollDown' (mode st)
+
+-- Boilerplate code
+scrollDown' IndexMode = do
   st <- get
   let inSt = indexState st
   let selRow = selectedRowIn inSt
@@ -101,7 +109,7 @@ scrollDown IndexMode = do
      else -- Move the selected row
        put $ incrementSelectedRow st
 
-scrollDown MaildirMode = do
+scrollDown' MaildirMode = do
   st <- get
   let mdSt = maildirState st
   let selRow = selectedRowMD mdSt
@@ -119,7 +127,7 @@ scrollDown MaildirMode = do
        put $ incrementSelectedRow st
 
 {- Down-scrolling in Email mode -}
-scrollDown EmailMode = do
+scrollDown' EmailMode = do
   st <- get
   let est = emailState st
   let cur = scrollRowEm est
@@ -130,10 +138,13 @@ scrollDown EmailMode = do
   when ((totalRows - scrRows + (bodyStartRow est) - 1) > (scrollRowEm est)) $
     put $ st { emailState = est' }
 
-scrollDown _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
+scrollDown' _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
 
-{- More boilerplate code -}
-scrollUp IndexMode = do
+scrollUp :: LazymailCurses ()
+scrollUp = get >>= \st -> scrollUp' (mode st)
+
+-- More boilerplate code
+scrollUp' IndexMode = do
   st <- get
   let inSt = indexState st
   let selRow = selectedRowIn inSt
@@ -148,7 +159,7 @@ scrollUp IndexMode = do
       else
         put $ decrementSelectedRow st
 
-scrollUp MaildirMode = do
+scrollUp' MaildirMode = do
   st <- get
   let mdSt = maildirState st
   let selRow = selectedRowMD mdSt
@@ -163,7 +174,7 @@ scrollUp MaildirMode = do
       else
         put $ decrementSelectedRow st
 
-scrollUp EmailMode = do
+scrollUp' EmailMode = do
   st <- get
   let est = emailState st
   let cur = scrollRowEm est
@@ -174,7 +185,7 @@ scrollUp EmailMode = do
   when (cur > 0) $
     put $ st { emailState = est' }
 
-scrollUp _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+scrollUp' _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
 
 incrementSelectedRow st | (selectedRow st) < limit =
   case (mode st) of
@@ -227,7 +238,7 @@ scrollCrop top rows xs = take rows $ drop top xs
 
 formatIndexModeRows :: LazymailState -> [Email] -> [(FilePath, String)]
 formatIndexModeRows st = map formatRow where
-  formatRow e = 
+  formatRow e =
     let fp = emailPath e
         email = emailValue e
         hs = mime_val_headers email
