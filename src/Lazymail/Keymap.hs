@@ -19,7 +19,7 @@ import UI.NCurses(Event(..), Key(..))
 import Lazymail.Types(Keymap, LazymailState(..), Mode(..), LazymailConfig(..))
 import Lazymail.Handlers(advanceMode, previousMode, scrollUp, scrollDown)
 
-defaultGlobalKeymap = [ ([EventCharacter '\n', EventSpecialKey KeyRightArrow], advanceMode)
+defaultGlobalKeymap = [ ([EventCharacter '\n', EventCharacter ' ', EventSpecialKey KeyRightArrow], advanceMode)
                       , ([EventCharacter 'q', EventCharacter 'Q'], previousMode)
                       , ([EventSpecialKey KeyUpArrow, EventCharacter 'k'], scrollUp)
                       , ([EventSpecialKey KeyDownArrow, EventCharacter 'j'], scrollDown)

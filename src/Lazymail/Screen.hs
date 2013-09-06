@@ -19,12 +19,13 @@ import System.Exit
 import UI.NCurses
 
 -- Local imports
+import Codec.Text.Rfc1342
 import Lazymail.Config
 import qualified Lazymail.Handlers as EH
+import Lazymail.Keymap(findHandler)
 import Lazymail.Maildir
 import Lazymail.Email(lookupField, getBody, getHeaders, lookupField')
 import Lazymail.Print
-import Codec.Text.Rfc1342
 import Lazymail.State
 import Lazymail.Types
 
@@ -217,30 +218,20 @@ drawStatusHelper IndexMode st =
 {- Status bar string for Email mode -}
 drawStatusHelper EmailMode st = ["mode: Email"]
 
-{- Handle an event
- - TODO: Handle the events in a cleaner way. -}
+{- Handle an event -}
 handleEvent :: LazymailCurses ()
 handleEvent = loop where
   loop = do
+    st <- get
+    cfg <- ask
     w <- liftCurses $ defaultWindow
     ev <- liftCurses $ getEvent w Nothing
-    st <- get
     case ev of
       Nothing  -> loop
       Just ev' ->
-        case ev' of
-          EventCharacter 'q'            -> EH.previousMode
-
-          EventSpecialKey KeyUpArrow    -> EH.scrollUp
-          EventCharacter 'k'            -> EH.scrollUp
-
-          EventSpecialKey KeyDownArrow  -> EH.scrollDown
-          EventCharacter 'j'            -> EH.scrollDown
-
-          EventCharacter '\n'           -> EH.advanceMode
-          EventSpecialKey KeyRightArrow -> EH.advanceMode
-
-          _ ->  loop
+        case findHandler st cfg ev' of
+          Nothing      -> loop
+          Just handler -> handler
 
 {- Reset the current row to the beginning -}
 resetCurrentRow = (=<<) put $ get >>= \st -> return $ st { currentRow = 0 }
