@@ -17,10 +17,10 @@ lazymail main features are:
 
 ## Installation
 A cabal build system will be available in the followings days. For the moment, use the following pseudo-algorithm to compile lazymail:
-```cd src/
-missingDeps <- ghc -o Main Main.hs
-mapM (\dep -> cabal install dep) missingDeps
-```
+
+    cd src/
+    missingDeps <- ghc -o Main Main.hs
+    mapM (\dep -> cabal install dep) missingDeps
 
 ## Usage
 The first thing you'll want to do is edit `customConfig` function, in **Config.hs** file. This function has some user configuration in order for the client to work. Edit `initialFile` and point it to the root of your maildirs hierarchy. Re-compile the program.
