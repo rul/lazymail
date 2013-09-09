@@ -31,6 +31,8 @@ defaultConfig = LazymailConfig {
   , indexModeKeymap    = defaultIndexKeymap
   , emailModeKeymap    = defaultEmailKeymap
   , composeModeKeymap  = defaultComposeKeymap
+  , textEditor         = "editor"
+  , sendmailCommand    = ["msmtp", "--read-envelope-from", "-t"]
 }
 
 --

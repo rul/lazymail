@@ -17,17 +17,29 @@ module Lazymail.Keymap
 import UI.NCurses(Event(..), Key(..))
 
 import Lazymail.Types(Keymap, LazymailState(..), Mode(..), LazymailConfig(..))
-import Lazymail.Handlers(advanceMode, previousMode, scrollUp, scrollDown)
+import Lazymail.Handlers( advanceMode, previousMode, scrollUp, scrollDown
+                        , toComposeMode, getFrom, getTo, getSubject, getCc
+                        , getBcc, getReplyTo, editEmail, sendEmail
+                        )
 
 defaultGlobalKeymap = [ ([EventCharacter '\n', EventCharacter ' ', EventSpecialKey KeyRightArrow], advanceMode)
                       , ([EventCharacter 'q', EventCharacter 'Q'], previousMode)
                       , ([EventSpecialKey KeyUpArrow, EventCharacter 'k'], scrollUp)
                       , ([EventSpecialKey KeyDownArrow, EventCharacter 'j'], scrollDown)
+                      , ([EventCharacter 'm'], toComposeMode)
                       ]
 defaultMaildirKeymap = []
 defaultIndexKeymap   = []
 defaultEmailKeymap   = []
-defaultComposeKeymap = []
+defaultComposeKeymap = [ ([EventCharacter 'f'], getFrom)
+                       , ([EventCharacter 't'], getTo)
+                       , ([EventCharacter 's'], getSubject)
+                       , ([EventCharacter 'c'], getCc)
+                       , ([EventCharacter 'b'], getBcc)
+                       , ([EventCharacter 'r'], getReplyTo)
+                       , ([EventCharacter 'e'], editEmail)
+                       , ([EventCharacter 'y'], sendEmail)
+                       ]
 
 -- | Try to find a keymap for the current mode. If nothing is found, then
 --   try looking up in the global keymap.

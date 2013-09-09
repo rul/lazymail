@@ -29,6 +29,7 @@ initialState = LazymailState {
   , indexState    = initialIndexState
   , composeState  = initialComposeState
   , emailState    = initialEmailState
+  , inputState    = initialInputState                  
   , colorStyle    = initialColorStyle
 }
 
@@ -59,7 +60,18 @@ initialEmailState = EmailState {
 }
 
 initialComposeState = ComposeState {
-    composition = Nothing
+    composeFields = initialComposeFields
+  , bodyFileName  = Nothing
+  , bodyReady     = False
+}
+
+initialComposeFields = ComposeFields {
+    fromField    = Nothing
+  , toField      = Nothing
+  , ccField      = Nothing
+  , bccField     = Nothing
+  , subjectField = Nothing
+  , replyToField = Nothing
 }
 
 initialColorStyle = ColorStyle {
@@ -68,6 +80,13 @@ initialColorStyle = ColorStyle {
   , statusBarColorID = defaultColorID
   , headerColorID    = defaultColorID
   , newEmailColorID  = defaultColorID
+}
+
+initialInputState    =  InputState {
+    inputRequested   = False
+  , prompt           = Nothing
+  , currentInput     = ""
+  , postInputActions = return ()
 }
 
 scrColsAsInteger st = toInteger $ screenColumns st

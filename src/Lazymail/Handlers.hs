@@ -9,20 +9,27 @@ module Lazymail.Handlers where
 
 import Codec.MIME.Parse(parseMIMEMessage)
 import Codec.MIME.Type(MIMEValue(..))
-import Control.Exception(evaluate)
+import Control.Monad.Reader
 import Control.Monad.State
 import Data.List(intercalate, stripPrefix, sort)
-import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator)
-import System.IO(openFile, IOMode(..), hClose)
+import System.Directory(getTemporaryDirectory)
+import System.Exit(ExitCode(..))
+import System.FilePath(FilePath, takeFileName, dropTrailingPathSeparator, (</>))
+import System.IO(openFile, IOMode(..), hClose, hSeek, SeekMode(..), hPutStrLn)
 import System.Locale(rfc822DateFormat)
+import System.Process(runProcess, waitForProcess)
+import System.Random(randomR, getStdGen, setStdGen)
 import Data.DateTime(parseDateTime, startOfTime, formatDateTime)
 import qualified System.IO.UTF8 as UTF8
+import qualified System.IO.Strict as Strict
+import UI.NCurses(setEcho)
 
 import Lazymail.Email(lookupField, getBody, formatBody)
 import Lazymail.Maildir
 import Lazymail.Print
 import Lazymail.State
 import Lazymail.Types
+import Lazymail.Utils(drawNotification)
 
 previousMode :: LazymailCurses ()
 previousMode = get >>= \st -> previousMode' (mode st)
@@ -39,6 +46,8 @@ previousMode' IndexMode   = do
   st <- get
   let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }
   put $ st { mode = MaildirMode, indexState = ist }
+
+previousMode' _  =  get >>= \st -> put $ st { mode = MaildirMode}
 
 advanceMode :: LazymailCurses ()
 advanceMode = get >>= \st -> advanceMode' (mode st)
@@ -85,6 +94,9 @@ advanceMode' MaildirMode =  do
       return (Email value date fp handle)
 
 advanceMode' _  = return ()
+
+toComposeMode :: LazymailCurses ()
+toComposeMode = get >>= \st -> put $ st { mode = ComposeMode }
 
 freeOldHandlers st = mapM (hClose . emailHandle) $ selectedEmails . indexState $ st
 
@@ -138,7 +150,7 @@ scrollDown' EmailMode = do
   when ((totalRows - scrRows + (bodyStartRow est) - 1) > (scrollRowEm est)) $
     put $ st { emailState = est' }
 
-scrollDown' _ = (=<<) put $ get >>= \st -> return $ incrementSelectedRow st
+scrollDown' _ = return ()
 
 scrollUp :: LazymailCurses ()
 scrollUp = get >>= \st -> scrollUp' (mode st)
@@ -185,7 +197,7 @@ scrollUp' EmailMode = do
   when (cur > 0) $
     put $ st { emailState = est' }
 
-scrollUp' _ = (=<<) put $ get >>= \st -> return $ decrementSelectedRow st
+scrollUp' _ = return ()
 
 incrementSelectedRow st | (selectedRow st) < limit =
   case (mode st) of
@@ -286,3 +298,124 @@ solveMaildirUpdate = do
   let mst = maildirState st
   put $ st { maildirState = (mst { triggerUpdateMD = False }) }
 
+getField :: Maybe String -> LazymailCurses () -> LazymailCurses ()
+getField pr postActions = do
+  st <- get
+  let is = initialInputState { inputRequested = True
+                             , prompt = pr
+                             , postInputActions = postActions}
+  put $ st { inputState = is }
+
+updateField :: (ComposeFields -> String -> ComposeFields) -> LazymailCurses ()
+updateField f = do
+  st <- get
+  let value = currentInput . inputState $ st
+  let cf = (composeFields . composeState $ st)
+  let cs = (composeState st) { composeFields = (f cf value) }
+  put $ st { inputState = initialInputState
+           , composeState = cs
+           }
+
+getFrom :: LazymailCurses ()
+getFrom = let postActions = updateField $ \cf val -> cf { fromField = Just val }
+          in getField (Just "From: ") postActions
+
+getTo :: LazymailCurses ()
+getTo = let postActions = updateField $ \cf val -> cf { toField = Just val }
+        in getField (Just "To: ") postActions
+
+getSubject :: LazymailCurses ()
+getSubject = let postActions = updateField $ \cf val -> cf { subjectField = Just val }
+             in getField (Just "Subject: ") postActions
+
+getCc :: LazymailCurses ()
+getCc = let postActions = updateField $ \cf val -> cf { ccField = Just val }
+        in getField (Just "Cc: ") postActions
+
+getBcc :: LazymailCurses ()
+getBcc = let postActions = updateField $ \cf val -> cf { bccField = Just val }
+        in getField (Just "Bcc: ") postActions
+
+getReplyTo :: LazymailCurses ()
+getReplyTo = let postActions = updateField $ \cf val -> cf { replyToField = Just val }
+             in getField (Just "Reply-To: ") postActions
+
+editEmail :: LazymailCurses ()
+editEmail = do
+  st <- get
+  cfg <- ask
+  fp <- getFileName
+  exitStatus <- liftIO $ do
+    child <- runProcess (textEditor cfg) [fp] Nothing Nothing Nothing Nothing Nothing
+    waitForProcess child
+  case exitStatus of
+    ExitSuccess -> do
+      st <- get
+      let cs = (composeState st) { bodyReady = True }
+      put $ st { composeState = cs }
+    _ -> drawNotification "The text editor exited abnormally"
+
+-- | Retrieve current file name. Create a randomized one if its's Nothing.
+getFileName :: LazymailCurses FilePath
+getFileName = do
+  st <- get
+  let cs = composeState st
+  case bodyFileName cs of
+    Just fp -> return fp
+    Nothing -> do
+      fp <- liftIO $ newFilename
+      let cs = (composeState st) { bodyFileName = Just fp }
+      put $ st { composeState = cs }
+      return fp
+
+  where
+    newFilename = do
+      tmp <- getTemporaryDirectory
+      num <- getRandomNumber
+      return $ (tmp </>) $ ("lazymail-" ++ ) $ show num
+
+getRandomNumber :: IO Int
+getRandomNumber = do
+  r1 <- getStdGen
+  let (num, r2) = randomR (100000,999999) r1
+  setStdGen r2
+  return num
+
+sendEmail :: LazymailCurses ()
+sendEmail = do
+  st <- get
+  cfg <- ask
+  let cs = composeState st
+  if not . readyToSend $ cs
+    then drawNotification $
+         "The email is not ready to be sent. Please check that all fields are correct."
+    else do
+      exitStatus <- liftIO $ do
+        emailHandle <- prepareEmail cs
+        child <- runProcess (head . sendmailCommand $ cfg)
+                            (tail . sendmailCommand $ cfg)
+                            Nothing Nothing (Just emailHandle) Nothing Nothing
+        e <- waitForProcess child
+        hClose emailHandle
+        return e
+      handleExitStatus exitStatus
+
+  where
+    handleExitStatus ExitSuccess = do
+      drawNotification $ "The email was successfully sent."
+      st <- get
+      put $ st { mode = MaildirMode, composeState = initialComposeState }
+    handleExitStatus _ = drawNotification $
+                         "Could not send the email. Please, check the logs of for your SMTP client."
+    prepareEmail cs = do
+      let fs = composeFields cs
+      let fileName = (maybe "" id $ bodyFileName cs)
+      body <- (Strict.hGetContents =<< openFile fileName ReadMode)
+      emailHandle <- openFile fileName WriteMode
+      hPutStrLn emailHandle $ (unlines . ppComposeFields True $ fs) ++ body
+      hClose emailHandle >> openFile fileName ReadMode
+
+readyToSend cs =
+  let from = maybe False (\_ -> True) $ fromField . composeFields $ cs
+      to   = maybe False (\_ -> True) $ toField . composeFields $ cs
+  in all id [from, to, bodyReady cs]

@@ -13,7 +13,7 @@ import Data.List (intercalate)
 
 import Lazymail.Email
 import Codec.Text.Rfc1342
-import Lazymail.Types(Flag(..), Flags)
+import Lazymail.Types(Flag(..), Flags, ComposeFields(..), ComposeState(..))
 
 unquote xs= if (head xs == '"' && last xs == '"') then (tail . init) xs else xs
 
@@ -43,18 +43,29 @@ ppFlag FORWARDED = 'P'
 ppFlag DELETED   = 'T'
 ppFlag (OTHERFLAG [c]) = c
 
+ppComposeState cs = ppComposeFields False (composeFields cs) ++
+                    [("Body file name: " ++) $ maybe "-" id $ bodyFileName cs]
+
+ppComposeFields removeEmpty cf | removeEmpty == False = l
+                               | otherwise = filter (\str -> (last str) /= '-') l
+  where l = [ ("From: " ++) $ maybe "-" id $ fromField cf
+            , ("To: " ++) $ maybe "-" id $ toField cf
+            , ("Cc: " ++) $ maybe "-" id $ ccField cf
+            , ("Bcc: " ++) $ maybe "-" id $ bccField cf
+            , ("Reply-To: " ++) $ maybe "-" id $ replyToField cf
+            , ("Subject: " ++) $ maybe "-" id $ subjectField cf
+            ]
+
 ppSep = "  "
 
-normalizeLen len cs = if (length cs > len)
-                      then shorten len cs
-                      else if (length cs < len)
-                           then fillWithSpace len cs
-                           else cs
+normalizeLen len cs | (length cs > len) = shorten len cs
+                    | otherwise = if (length cs < len)
+                                  then fillWithSpace len cs
+                                  else cs
 
 fillWithSpace len cs = cs ++ (take (len - length cs) . repeat $ ' ')
 
 -- The following functions are from DynamicLog xmonad-contrib source
-
 -- | Wrap a string in delimiters, unless it is empty.
 wrap :: String  -- ^ left delimiter
      -> String  -- ^ right delimiter

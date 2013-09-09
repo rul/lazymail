@@ -9,12 +9,12 @@
 
 module Lazymail.Screen where
 
-import Codec.MIME.Type(MIMEValue(..))
-import Control.Monad.Trans(liftIO)
+import Codec.MIME.Type ( MIMEValue(..) )
+import Control.Monad.Trans ( liftIO )
 import Control.Monad.Reader
 import Control.Monad.State
-import Data.Char(toUpper)
-import Data.List(isPrefixOf)
+import Data.Char ( toUpper, isPrint )
+import Data.List ( isPrefixOf )
 import System.Exit
 import UI.NCurses
 
@@ -22,12 +22,15 @@ import UI.NCurses
 import Codec.Text.Rfc1342
 import Lazymail.Config
 import qualified Lazymail.Handlers as EH
-import Lazymail.Keymap(findHandler)
+import Lazymail.Keymap ( findHandler )
 import Lazymail.Maildir
-import Lazymail.Email(lookupField, getBody, getHeaders, lookupField')
+import Lazymail.Email ( lookupField, getBody, getHeaders, lookupField' )
 import Lazymail.Print
 import Lazymail.State
 import Lazymail.Types
+import Lazymail.Utils ( newDialogWindow, liftCurses
+                      , drawCroppedString, drawNotification
+                      )
 
 {- This function is the nexus between Curses and IO -}
 entryPoint :: Lazymail ()
@@ -73,7 +76,9 @@ screenLoop = do
   get >>=  \st ->
     (liftCurses . (updateWindow w) $ runStateT (runReaderT performUpdate cfg) st) >>= put . snd
   liftCurses $ render
-  handleEvent
+  st <- get
+  if (inputRequested . inputState $ st)
+     then handleInputRequest else handleEvent
   get >>= \st -> if (not . exitRequested) st
                  then screenLoop
                  else return ()
@@ -92,6 +97,7 @@ drawMode :: Mode -> LazymailUpdate ()
 drawMode MaildirMode = get >>= \st -> drawSelectionList $ scrollBufferMD . maildirState $ st
 drawMode IndexMode   = get >>= \st -> drawSelectionList $ scrollBufferIn . indexState $ st
 drawMode EmailMode   = drawEmailHelper
+drawMode ComposeMode = drawComposeModeHelper
 
 {- Draw a scrollable selection list -}
 drawSelectionList [] = resetCurrentRow
@@ -194,6 +200,24 @@ drawBody row col maxRows (xs:xss) = do
   drawString xs
   when (row <  maxRows) $ drawBody (row + 1) col maxRows  xss
 
+{- Draw the current Compose mode fields -}
+drawComposeModeHelper = do
+  st <- get
+  let cs = composeState st
+  let row = curRowAsInteger st
+  let col = colPadAsInteger st
+  let maxRows = if statusBar st then (scrRowsAsInteger st) - 1 else scrRowsAsInteger st
+  liftUpdate $ do
+    drawComposeModeFields st row col maxRows $ ppComposeState cs
+    moveCursor (maxRows - 1) col
+
+  where
+    drawComposeModeFields _ _ _ _ [] = return ()
+    drawComposeModeFields st row col maxRows (f:fs) = do
+      moveCursor row col
+      drawCroppedString st f
+      when (row <  maxRows) $ drawComposeModeFields st (row + 1) col maxRows fs
+
 {- Draw a status line with the current mode and other stuff -}
 drawStatus  = do
   st <- get
@@ -217,6 +241,9 @@ drawStatusHelper IndexMode st =
 
 {- Status bar string for Email mode -}
 drawStatusHelper EmailMode st = ["mode: Email"]
+
+{- Status bar string for Compose mode -}
+drawStatusHelper ComposeMode st = ["mode: Compose"]
 
 {- Handle an event -}
 handleEvent :: LazymailCurses ()
@@ -252,8 +279,52 @@ resetScrollBuffer = do
             scrollBufferIn = EH.formatIndexModeRows st $  EH.scrollCrop 0 (screenRows st) $ selectedEmails . indexState $ st }
       put st { indexState = ist }
 
-drawCroppedString st str = drawString $ normalizeLen (screenColumns st) str
-
--- The type system complains if I want to use the same function for diferents monads
-liftCurses = lift . lift
 liftUpdate  = lift . lift
+
+-- Input handling functions --
+handleInputRequest :: LazymailCurses ()
+handleInputRequest = do
+  st <- get
+  let is = inputState st
+  (_, cols, w) <- liftCurses $ newDialogWindow st
+  getLineFromWindow w $ fromIntegral cols
+  liftCurses $ closeWindow w
+
+getLineFromWindow :: Window -> Int -> LazymailCurses ()
+getLineFromWindow w cols = do
+  st <- get
+  let is = inputState st
+  liftCurses $ do
+    updateWindow w $ do
+      cleanLine
+      moveCursor 1 1
+      drawString $ (maybe "" id $ prompt is) ++ (currentInput is)
+    render
+  loopForEvents w
+  st <- get
+  when (inputRequested . inputState $ st) $ getLineFromWindow w cols
+
+  where
+    cleanLine = moveCursor 1 1 >> (drawString $ replicate (cols - 2) ' ')
+
+    loopForEvents w = do
+      st <- get
+      let is = inputState st
+      let ci = currentInput is
+      let pr = maybe "" id $ prompt is
+      ev <- liftCurses $ getEvent w Nothing
+      case ev of
+        Nothing  -> loopForEvents w
+        Just ev' -> case ev' of
+          EventCharacter '\n' -> do
+            postInputActions is
+            st' <- get
+            put $ st' { inputState = (is { inputRequested = False}) }
+          EventCharacter c | isPrint c -> do
+            let ci' = if length ci == cols - (length pr) - 2 then ci else ci ++ [c]
+            put $ st { inputState = (is { currentInput = ci' }) }
+          EventSpecialKey KeyBackspace -> do
+            let ci' = if null ci then ci else init ci
+            put $ st { inputState = (is { currentInput = ci' } ) }
+          _ -> loopForEvents w
+

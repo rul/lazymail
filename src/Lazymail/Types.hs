@@ -39,6 +39,8 @@ data LazymailConfig = LazymailConfig {
   , indexModeKeymap    :: [Keymap]
   , emailModeKeymap    :: [Keymap]
   , composeModeKeymap  :: [Keymap]
+  , textEditor         :: FilePath  
+  , sendmailCommand    :: [String]
 }
 
 data Email = Email {
@@ -84,6 +86,7 @@ data LazymailState = LazymailState {
   , indexState      :: IndexState
   , emailState      :: EmailState
   , composeState    :: ComposeState
+  , inputState      :: InputState    
   , colorStyle      :: ColorStyle
 }
 
@@ -107,8 +110,19 @@ data IndexState = IndexState {
 }
 
 data ComposeState = ComposeState {
-    composition     :: Maybe String
+    composeFields :: ComposeFields
+  , bodyFileName  :: Maybe FilePath
+  , bodyReady     :: Bool  
 }
+
+data ComposeFields = ComposeFields {
+    fromField    :: Maybe String
+  , toField      :: Maybe String
+  , ccField      :: Maybe String
+  , bccField     :: Maybe String
+  , subjectField :: Maybe String
+  , replyToField :: Maybe String
+}  
 
 data EmailState = EmailState {
     scrollRowEm    :: Int
@@ -124,5 +138,12 @@ data ColorStyle = ColorStyle {
   , headerColorID    :: ColorID
   , newEmailColorID  :: ColorID
 }
+
+data InputState = InputState {
+    inputRequested    :: Bool
+  , prompt            :: Maybe String
+  , currentInput      :: String
+  , postInputActions  :: LazymailCurses ()
+}    
 
 type Keymap = ([Event], LazymailCurses ())
