@@ -1,0 +1,37 @@
+Name:          lazymail
+Version:       0.1
+Author:        Raúl Benencia
+License:       GPL-3
+License-File:  LICENSE
+Copyright:     2013 Raúl Benencia
+Build-type:    Simple
+Cabal-version: >= 1.2
+Maintainer:    Raúl Benencia <rul@kalgan.cc>
+Stability:     experimental
+Homepage:      https://kalgan.cc/software/lazymail
+Synopsis:      Console Mail User Agent
+Description:
+ lazymail is an ncurses console mail user agent. It does not offer any IMAP
+ or POP support, as it operates only on Maildir hierarchies. Given an
+ initial path, the MUA has the ability to search and show in a tree-like
+ view of all the maildirs recursively found. Once a maildir is selected,
+ lazymail will show all the emails inside it with a cool scrolling
+ functionality. lazymail also has the ability to compose emails with your
+ favourite text editor, and send them using an sendmail-like program.
+ .
+ lazymail was born as a final project for a functional programming
+ course. As such, the overall code quality isn't great and the program is
+ not even close for production use.
+
+Library
+    Exposed-modules: Codec.Text.Rfc1342
+    Build-depends: dataenc >= 0.14, encoding >= 0.6, base
+    hs-source-dirs: src/
+
+Executable lazymail
+    Main-is:        Main.hs
+    Build-depends:
+     base, directory, filepath, datetime, monad-loops, mtl, strict,
+     old-locale, process, random, unix, utf8-string,
+     mime >= 0.3.4, ncurses >= 0.2.4
+    hs-source-dirs: src/
