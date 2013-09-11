@@ -87,7 +87,7 @@ screenLoop = do
 performUpdate :: LazymailUpdate LazymailState
 performUpdate = do
   st <- get
-  liftUpdate $ clearMain (scrRowsAsInteger st) (screenColumns st)
+  liftUpdate $ clearMain (baseColorID . colorStyle $ st) (scrRowsAsInteger st) (screenColumns st)
   drawMode (mode st)
   drawStatus
   get
@@ -141,7 +141,8 @@ drawSimpleRow st path str | (mode st) == MaildirMode = drawString $ normalizeLen
     drawCroppedString st str
 
 {- Empty the whole window. Useful when changing modes. -}
-clearMain rows columns = do
+clearMain baseCol rows columns = do
+  setColor baseCol
   drawEmptyLine 0
   moveCursor 0 0
   where

@@ -40,9 +40,7 @@ defaultConfig = LazymailConfig {
 -- preferences. In a possible future maybe I'll work in a not-so-crappy
 -- config system.
 --
---customConfig = defaultConfig { initialPath = "/home/rul/mail/"}
-
-customConfig = defaultConfig { initialPath = "/home/rul/mail/"
+customConfig = defaultConfig { initialPath = "/home/rul/Mail"
                              , filterMaildirsHook = filterSymlinks }
 
 filterSymlinks :: [FilePath] -> IO [FilePath]
