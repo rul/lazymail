@@ -14,7 +14,7 @@ Description:
  lazymail is an ncurses console mail user agent. It does not offer any IMAP
  or POP support, as it operates only on Maildir hierarchies. Given an
  initial path, the MUA has the ability to search and show in a tree-like
- view of all the maildirs recursively found. Once a maildir is selected,
+ view all the maildirs recursively found. Once a maildir is selected,
  lazymail will show all the emails inside it with a cool scrolling
  functionality. lazymail also has the ability to compose emails with your
  favourite text editor, and send them using an sendmail-like program.
