@@ -9,9 +9,7 @@
 module Lazymail.State where
 
 import Codec.MIME.Type(MIMEValue, nullMIMEValue)
-import Text.ParserCombinators.Parsec.Rfc2822(Message, GenericMessage(..))
 import UI.NCurses(ColorID(..), defaultColorID)
-import Network.Email.Mailbox(Flag(..), Flags)
 import System.FilePath
 
 import Lazymail.Types
@@ -29,7 +27,7 @@ initialState = LazymailState {
   , indexState    = initialIndexState
   , composeState  = initialComposeState
   , emailState    = initialEmailState
-  , inputState    = initialInputState                  
+  , inputState    = initialInputState
   , colorStyle    = initialColorStyle
 }
 

@@ -38,10 +38,8 @@ previousMode' MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested
 previousMode' EmailMode   = do
   st <- get
   if (triggerUpdateIn . indexState $ st)
-  then do
-    advanceMode
-    solveIndexUpdate
-  else put $ st { mode = IndexMode }
+    then advanceMode >> solveIndexUpdate
+    else put $ st { mode = IndexMode }
 previousMode' IndexMode   = do
   st <- get
   let ist = (indexState st) { selectedRowIn = 0, scrollRowIn = 0 }
