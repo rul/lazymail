@@ -38,7 +38,7 @@ previousMode' MaildirMode = (=<<) put $ get >>= \st -> return st { exitRequested
 previousMode' EmailMode   = do
   st <- get
   if (triggerUpdateIn . indexState $ st)
-    then advanceMode >> solveIndexUpdate
+    then advanceMode' MaildirMode >> solveIndexUpdate
     else put $ st { mode = IndexMode }
 previousMode' IndexMode   = do
   st <- get
